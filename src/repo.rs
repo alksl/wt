@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow, bail};
 
+/// One entry of `git worktree list`.
 pub struct Worktree {
     pub path: PathBuf,
     /// Short branch name; `None` when detached.
@@ -20,7 +21,7 @@ pub struct Worktree {
 pub struct Repo {
     repo: gix::Repository,
     /// Only opened when running from a linked worktree; otherwise `repo` is the main one.
-    main_repo: OnceCell<gix::Repository>,
+    main: OnceCell<gix::Repository>,
     main_worktree: OnceCell<PathBuf>,
     main_branch: OnceCell<Option<String>>,
     default_branch: OnceCell<Option<String>>,
@@ -34,7 +35,7 @@ impl Repo {
             .map_err(|_| anyhow!("Not inside a git repository"))?;
         Ok(Self {
             repo,
-            main_repo: OnceCell::new(),
+            main: OnceCell::new(),
             main_worktree: OnceCell::new(),
             main_branch: OnceCell::new(),
             default_branch: OnceCell::new(),
@@ -206,7 +207,7 @@ impl Repo {
         if !matches!(self.repo.kind(), gix::repository::Kind::LinkedWorkTree) {
             return Ok(&self.repo);
         }
-        try_init(&self.main_repo, || {
+        try_init(&self.main, || {
             self.repo
                 .main_repo()
                 .context("Could not open the main worktree")
