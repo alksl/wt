@@ -13,6 +13,7 @@ Rust comes from mise (`.tool-versions`, `rust latest`), so the shell needs mise 
 ```sh
 cargo build
 cargo clippy --all-targets
+cargo fmt --check
 cargo test --test switch                               # one command's tests
 cargo test --test switch prints_only_the_worktree_path # one test
 ```
