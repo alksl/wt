@@ -59,6 +59,21 @@ impl Repo {
             bail!("Bare repositories are not supported: {}", common.display())
         }
     }
+
+    /// Where `wt new` puts a branch: `<parent of main>/<main basename>-<branch>`.
+    pub fn worktree_path_for(&self, branch: &str) -> Result<PathBuf> {
+        let main = self.main_worktree()?;
+        let name = main.file_name().context("The main worktree has no directory name")?;
+        let parent = main.parent().expect("a path with a file name has a parent");
+        Ok(parent.join(format!("{}-{branch}", name.to_string_lossy())))
+    }
+
+    /// The branch checked out in the main worktree, if it isn't detached.
+    pub fn main_branch(&self) -> Result<Option<String>> {
+        let main = self.repo.main_repo().context("Could not open the main worktree")?;
+        let head = main.head().context("Could not read the main worktree's HEAD")?;
+        Ok(head.referent_name().map(|name| name.shorten().to_string()))
+    }
 }
 
 fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Worktree> {
