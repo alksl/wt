@@ -10,8 +10,9 @@ pub fn run(subcommand: &str) -> Result<()> {
         other => bail!("no completions for '{other}'"),
     };
 
-    for wt in Repo::discover()?.worktrees()? {
-        if let Some(branch) = wt.branch.filter(|_| include_main || !wt.is_main) {
+    let repo = Repo::discover()?;
+    for wt in repo.worktrees()? {
+        if let Some(branch) = wt.branch.as_ref().filter(|_| include_main || !wt.is_main) {
             println!("{branch}");
         }
     }

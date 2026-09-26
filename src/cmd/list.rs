@@ -4,7 +4,8 @@ use crate::repo::Repo;
 
 /// Same shape as `git worktree list`: path, short HEAD, `[branch]` or `(detached HEAD)`.
 pub fn run() -> Result<()> {
-    let worktrees = Repo::discover()?.worktrees()?;
+    let repo = Repo::discover()?;
+    let worktrees = repo.worktrees()?;
     let heads: Vec<_> = worktrees
         .iter()
         .map(|w| w.head_short.as_deref().unwrap_or("0000000"))

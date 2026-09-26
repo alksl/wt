@@ -1,6 +1,7 @@
 //! Read-only view of the repository through gix. Nothing here writes; mutations live in `git`.
 
-use std::path::PathBuf;
+use std::cell::OnceCell;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow, bail};
 
@@ -11,12 +12,19 @@ pub struct Worktree {
     /// Abbreviated HEAD commit, as `git worktree list` shows it; `None` before the first commit.
     pub head_short: Option<String>,
     pub is_main: bool,
-    /// Checked out on the default branch; see `Repo::default_branch`.
-    pub is_default: bool,
 }
 
+/// Each fact is read at most once, on first use, and kept for the rest of the run: shell
+/// completion runs `wt` on every keystroke. A command reads what it needs before it changes
+/// anything, so nothing cached here goes stale under it.
 pub struct Repo {
     repo: gix::Repository,
+    /// Only opened when running from a linked worktree; otherwise `repo` is the main one.
+    main_repo: OnceCell<gix::Repository>,
+    main_worktree: OnceCell<PathBuf>,
+    main_branch: OnceCell<Option<String>>,
+    default_branch: OnceCell<Option<String>>,
+    worktrees: OnceCell<Vec<Worktree>>,
 }
 
 impl Repo {
@@ -24,60 +32,61 @@ impl Repo {
     pub fn discover() -> Result<Self> {
         let repo = gix::discover_with_environment_overrides(".")
             .map_err(|_| anyhow!("Not inside a git repository"))?;
-        Ok(Self { repo })
+        Ok(Self {
+            repo,
+            main_repo: OnceCell::new(),
+            main_worktree: OnceCell::new(),
+            main_branch: OnceCell::new(),
+            default_branch: OnceCell::new(),
+            worktrees: OnceCell::new(),
+        })
     }
 
     /// All worktrees, main first, in the order `git worktree list` prints them.
-    pub fn worktrees(&self) -> Result<Vec<Worktree>> {
-        let main = self
-            .repo
-            .main_repo()
-            .context("Could not open the main worktree")?;
-        let mut all = vec![describe(&main, self.main_worktree()?, true)?];
+    pub fn worktrees(&self) -> Result<&[Worktree]> {
+        let all = try_init(&self.worktrees, || {
+            let main = describe(self.main_repo()?, self.main_worktree()?.to_path_buf(), true)?;
 
-        let mut linked = Vec::new();
-        for proxy in self.repo.worktrees().context("Could not list worktrees")? {
-            let path = proxy
-                .base()
-                .context("Could not read a worktree's location")?;
-            let path = path.canonicalize().unwrap_or(path);
-            let repo = proxy
-                .into_repo_with_possibly_inaccessible_worktree()
-                .with_context(|| format!("Could not open worktree {}", path.display()))?;
-            linked.push(describe(&repo, path, false)?);
-        }
-        // git sorts linked worktrees bytewise by path, not by their id under .git/worktrees.
-        linked.sort_by(|a, b| {
-            a.path
-                .as_os_str()
-                .as_encoded_bytes()
-                .cmp(b.path.as_os_str().as_encoded_bytes())
-        });
-        all.extend(linked);
+            let mut linked = Vec::new();
+            for proxy in self.repo.worktrees().context("Could not list worktrees")? {
+                let path = proxy
+                    .base()
+                    .context("Could not read a worktree's location")?;
+                let path = path.canonicalize().unwrap_or(path);
+                let repo = proxy
+                    .into_repo_with_possibly_inaccessible_worktree()
+                    .with_context(|| format!("Could not open worktree {}", path.display()))?;
+                linked.push(describe(&repo, path, false)?);
+            }
+            // git sorts linked worktrees bytewise by path, not by their id under .git/worktrees.
+            linked.sort_by(|a, b| {
+                a.path
+                    .as_os_str()
+                    .as_encoded_bytes()
+                    .cmp(b.path.as_os_str().as_encoded_bytes())
+            });
 
-        let default = self.default_branch()?;
-        for wt in &mut all {
-            wt.is_default = default.is_some() && wt.branch == default;
-        }
+            Ok(std::iter::once(main).chain(linked).collect())
+        })?;
         Ok(all)
     }
 
     /// The main worktree's path, even when running from a linked one.
-    pub fn main_worktree(&self) -> Result<PathBuf> {
-        // Like git: the real path of the common dir, minus a trailing `.git`.
-        let common = self
-            .repo
-            .common_dir()
-            .canonicalize()
-            .context("Could not resolve the repository's git directory")?;
-        if common.file_name().is_some_and(|name| name == ".git") {
-            Ok(common
-                .parent()
-                .expect("a .git dir has a parent")
-                .to_path_buf())
-        } else {
-            bail!("Bare repositories are not supported: {}", common.display())
-        }
+    pub fn main_worktree(&self) -> Result<&Path> {
+        let path = try_init(&self.main_worktree, || {
+            // Like git: the real path of the common dir, minus a trailing `.git`.
+            let mut path = self
+                .repo
+                .common_dir()
+                .canonicalize()
+                .context("Could not resolve the repository's git directory")?;
+            if !path.ends_with(".git") {
+                bail!("Bare repositories are not supported: {}", path.display());
+            }
+            path.pop();
+            Ok(path)
+        })?;
+        Ok(path)
     }
 
     /// Where `wt new` puts a branch: `<parent of main>/<main basename>-<branch>`.
@@ -106,46 +115,52 @@ impl Repo {
         Ok(found.is_some())
     }
 
+    /// Whether `wt` is checked out on the default branch; see `default_branch`.
+    pub fn is_default(&self, wt: &Worktree) -> Result<bool> {
+        Ok(wt.branch.is_some() && wt.branch.as_deref() == self.default_branch()?)
+    }
+
     /// The worktree that has `branch` checked out, if any.
-    pub fn worktree_for_branch(&self, branch: &str) -> Result<Option<PathBuf>> {
+    pub fn worktree_for_branch(&self, branch: &str) -> Result<Option<&Path>> {
         Ok(self
             .worktrees()?
-            .into_iter()
+            .iter()
             .find(|wt| wt.branch.as_deref() == Some(branch))
-            .map(|wt| wt.path))
+            .map(|wt| wt.path.as_path()))
     }
 
     /// The branch checked out in the main worktree, if it isn't detached.
-    pub fn main_branch(&self) -> Result<Option<String>> {
-        let main = self
-            .repo
-            .main_repo()
-            .context("Could not open the main worktree")?;
-        let head = main
-            .head()
-            .context("Could not read the main worktree's HEAD")?;
-        Ok(head.referent_name().map(|name| name.shorten().to_string()))
+    pub fn main_branch(&self) -> Result<Option<&str>> {
+        let branch = try_init(&self.main_branch, || {
+            let head = self
+                .main_repo()?
+                .head()
+                .context("Could not read the main worktree's HEAD")?;
+            Ok(head.referent_name().map(|name| name.shorten().to_string()))
+        })?;
+        Ok(branch.as_deref())
     }
 
-    /// `origin/HEAD`'s target, else the branch checked out in the main worktree, which by convention
-    /// stays on the default branch.
-    pub fn default_branch(&self) -> Result<Option<String>> {
-        let origin_head = self
-            .repo
-            .try_find_reference("refs/remotes/origin/HEAD")
-            .context("Could not read refs/remotes/origin/HEAD")?;
-        if let Some(gix::refs::TargetRef::Symbolic(target)) =
-            origin_head.as_ref().map(|r| r.target())
-        {
-            let target = target.as_bstr().to_string();
-            return Ok(Some(
-                target
+    /// `origin/HEAD`'s target, else the branch checked out in the main worktree, which by
+    /// convention stays on the default branch.
+    pub fn default_branch(&self) -> Result<Option<&str>> {
+        let branch = try_init(&self.default_branch, || {
+            let origin_head = self
+                .repo
+                .try_find_reference("refs/remotes/origin/HEAD")
+                .context("Could not read refs/remotes/origin/HEAD")?;
+            if let Some(gix::refs::TargetRef::Symbolic(target)) =
+                origin_head.as_ref().map(gix::Reference::target)
+            {
+                let target = target.as_bstr().to_string();
+                let branch = target
                     .strip_prefix("refs/remotes/origin/")
-                    .unwrap_or(&target)
-                    .to_string(),
-            ));
-        }
-        self.main_branch()
+                    .unwrap_or(&target);
+                return Ok(Some(branch.to_owned()));
+            }
+            Ok(self.main_branch()?.map(str::to_owned))
+        })?;
+        Ok(branch.as_deref())
     }
 
     /// Whether local `branch` is reachable from `target`, like `git merge-base --is-ancestor`.
@@ -186,6 +201,26 @@ impl Repo {
             .try_find_reference(format!("refs/heads/{branch}").as_str())
             .with_context(|| format!("Could not read branch '{branch}'"))
     }
+
+    fn main_repo(&self) -> Result<&gix::Repository> {
+        if !matches!(self.repo.kind(), gix::repository::Kind::LinkedWorkTree) {
+            return Ok(&self.repo);
+        }
+        try_init(&self.main_repo, || {
+            self.repo
+                .main_repo()
+                .context("Could not open the main worktree")
+        })
+    }
+}
+
+/// `OnceCell::get_or_init` for a fallible `init`, which leaves the cell empty when it fails.
+fn try_init<T>(cell: &OnceCell<T>, init: impl FnOnce() -> Result<T>) -> Result<&T> {
+    if let Some(value) = cell.get() {
+        return Ok(value);
+    }
+    let value = init()?;
+    Ok(cell.get_or_init(|| value))
 }
 
 fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Worktree> {
@@ -199,6 +234,5 @@ fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Work
         branch,
         head_short,
         is_main,
-        is_default: false,
     })
 }

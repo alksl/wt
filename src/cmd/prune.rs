@@ -14,13 +14,12 @@ pub fn run() -> Result<()> {
     let mut pruned = 0;
     let mut failed = 0;
 
-    for wt in repo
-        .worktrees()?
-        .into_iter()
-        .filter(|w| !w.is_main && !w.is_default)
-    {
+    for wt in repo.worktrees()?.iter().filter(|w| !w.is_main) {
+        if repo.is_default(wt)? {
+            continue;
+        }
         let Some(branch) = &wt.branch else { continue };
-        if !repo.is_ancestor(branch, &default_branch)? {
+        if !repo.is_ancestor(branch, default_branch)? {
             continue;
         }
         let path = wt.path.display();

@@ -10,11 +10,9 @@ pub fn run(branch: &str, create: bool) -> Result<()> {
         cmd::new::run(branch)?;
     }
 
-    let resolves_to_main = [repo.default_branch()?, repo.main_branch()?]
-        .iter()
-        .any(|b| b.as_deref() == Some(branch));
+    let resolves_to_main = [repo.default_branch()?, repo.main_branch()?].contains(&Some(branch));
     let path = if resolves_to_main {
-        repo.main_worktree()?
+        repo.main_worktree()?.to_path_buf()
     } else {
         repo.worktree_path_for(branch)?
     };
