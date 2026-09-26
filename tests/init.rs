@@ -158,3 +158,27 @@ fn completion_inserts_only_the_branch_name() {
     assert_ok(&out);
     assert_eq!(stdout(&out), "feat\nfix-typo\nlocal-only\n");
 }
+
+#[test]
+fn creating_triggers_complete_from_the_branches_without_a_worktree() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+    repo.git(&repo.main, &["branch", "local-only"]);
+    // Stands in for fzf's helper, which reads the candidates on stdin.
+    let complete = |lbuf: &str| {
+        let out = zsh(
+            &repo,
+            &repo.main,
+            &format!(
+                r#"eval "$(wt init zsh)"; _fzf_complete() {{ cat }}; _fzf_complete_wt "{lbuf}""#
+            ),
+        );
+        assert_ok(&out);
+        stdout(&out)
+    };
+
+    for lbuf in ["wt new ", "wt sw -c ", "wt switch --create "] {
+        assert_eq!(complete(lbuf), "local-only\tlocal\n", "{lbuf:?}");
+    }
+    assert_eq!(complete("wt sw "), "main\nfeat\nlocal-only\tlocal\n");
+}

@@ -14,6 +14,7 @@ pub fn run(subcommand: &str) -> Result<()> {
             lines.extend(without_worktree(&repo)?);
             lines
         }
+        "new" => without_worktree(&repo)?,
         "remove" | "rm" => checked_out(&repo, false)?,
         other => bail!("no completions for '{other}'"),
     };
@@ -29,7 +30,7 @@ fn checked_out(repo: &Repo, include_main: bool) -> Result<Vec<String>> {
         .collect())
 }
 
-/// Branches `wt new` would give a worktree: local ones first, then those only origin has.
+/// Branches `wt new` and `wt sw -c` would give a worktree: local ones first, then those only origin has.
 fn without_worktree(repo: &Repo) -> Result<Vec<String>> {
     let local = repo.local_branches()?;
     let mut lines = Vec::new();

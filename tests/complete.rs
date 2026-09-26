@@ -43,6 +43,19 @@ fn switch_also_offers_branches_without_a_worktree_marked_by_where_they_are() {
 }
 
 #[test]
+fn new_offers_only_the_branches_without_a_worktree() {
+    let repo = review_repo();
+
+    let out = repo.wt(&repo.main, &["complete", "new"]);
+
+    assert_ok(&out);
+    assert_eq!(
+        stdout(&out),
+        "both\tlocal\nlocal-only\tlocal\nremote-feature\torigin\n"
+    );
+}
+
+#[test]
 fn remove_leaves_out_the_main_worktree() {
     let repo = TestRepo::new();
     repo.add_worktree("feat");
