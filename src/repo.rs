@@ -10,6 +10,7 @@ pub struct Worktree {
     pub branch: Option<String>,
     /// Abbreviated HEAD commit, as `git worktree list` shows it; `None` before the first commit.
     pub head_short: Option<String>,
+    pub is_main: bool,
 }
 
 pub struct Repo {
@@ -27,7 +28,7 @@ impl Repo {
     /// All worktrees, main first, in the order `git worktree list` prints them.
     pub fn worktrees(&self) -> Result<Vec<Worktree>> {
         let main = self.repo.main_repo().context("Could not open the main worktree")?;
-        let mut all = vec![describe(&main, self.main_worktree()?)?];
+        let mut all = vec![describe(&main, self.main_worktree()?, true)?];
 
         let mut linked = Vec::new();
         for proxy in self.repo.worktrees().context("Could not list worktrees")? {
@@ -36,7 +37,7 @@ impl Repo {
             let repo = proxy
                 .into_repo_with_possibly_inaccessible_worktree()
                 .with_context(|| format!("Could not open worktree {}", path.display()))?;
-            linked.push(describe(&repo, path)?);
+            linked.push(describe(&repo, path, false)?);
         }
         // git sorts linked worktrees bytewise by path, not by their id under .git/worktrees.
         linked.sort_by(|a, b| a.path.as_os_str().as_encoded_bytes().cmp(b.path.as_os_str().as_encoded_bytes()));
@@ -60,11 +61,11 @@ impl Repo {
     }
 }
 
-fn describe(repo: &gix::Repository, path: PathBuf) -> Result<Worktree> {
+fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Worktree> {
     let head = repo
         .head()
         .with_context(|| format!("Could not read HEAD of {}", path.display()))?;
     let branch = head.referent_name().map(|name| name.shorten().to_string());
     let head_short = head.id().map(|id| id.shorten_or_id().to_string());
-    Ok(Worktree { path, branch, head_short })
+    Ok(Worktree { path, branch, head_short, is_main })
 }
