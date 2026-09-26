@@ -1,9 +1,14 @@
 # Shell integration for wt. Load it with: eval "$(wt init zsh)"
 
-# `wt switch` prints the worktree path; cd to it here, since a child process can't.
+# `wt switch` prints the worktree path; cd to it here, since a child process can't. Its help is
+# printed as is.
 function wt() {
     case "$1" in
         switch|sw)
+            if (( ${@[(I)(-h|--help)]} )); then
+                command wt "$@"
+                return
+            fi
             local target
             target=$(command wt "$@") || return
             builtin cd -- "$target"

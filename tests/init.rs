@@ -123,3 +123,24 @@ fn defines_the_fzf_completion() {
         "_fzf_complete_wt: function\n_fzf_complete_wt_post: function\n"
     );
 }
+
+#[test]
+fn switch_help_is_printed_not_cd_into() {
+    let repo = TestRepo::new();
+
+    for flag in ["-h", "--help"] {
+        let out = zsh(
+            &repo,
+            &repo.main,
+            &format!(r#"eval "$(wt init zsh)"; wt sw {flag} && pwd"#),
+        );
+
+        assert_ok(&out);
+        let stdout = stdout(&out);
+        assert!(stdout.starts_with("Print the worktree path"), "{stdout}");
+        assert!(
+            stdout.ends_with(&format!("\n{}\n", repo.main.display())),
+            "{stdout}"
+        );
+    }
+}
