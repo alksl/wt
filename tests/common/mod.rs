@@ -38,6 +38,33 @@ impl TestRepo {
         repo
     }
 
+    /// A toy project with real files, pushed to its origin, plus a `remote-feature` branch that
+    /// only origin has.
+    pub fn toy() -> Self {
+        let repo = Self::with_origin();
+        repo.write(&repo.main, "README.md", "# toy\n");
+        repo.write(&repo.main, "src/lib.rs", "pub fn answer() -> u32 {\n    42\n}\n");
+        repo.git(&repo.main, &["add", "."]);
+        repo.git(&repo.main, &["commit", "--quiet", "-m", "Add the toy project"]);
+        repo.git(&repo.main, &["push", "--quiet", "origin", "main"]);
+
+        repo.git(&repo.main, &["switch", "--quiet", "-c", "remote-feature"]);
+        repo.write(&repo.main, "src/feature.rs", "pub fn feature() {}\n");
+        repo.git(&repo.main, &["add", "."]);
+        repo.git(&repo.main, &["commit", "--quiet", "-m", "Add a feature"]);
+        repo.git(&repo.main, &["push", "--quiet", "origin", "remote-feature"]);
+        repo.git(&repo.main, &["switch", "--quiet", "main"]);
+        repo.git(&repo.main, &["branch", "--quiet", "-D", "remote-feature"]);
+        repo
+    }
+
+    /// Writes `contents` to `rel` under `dir`, creating parent directories.
+    pub fn write(&self, dir: &Path, rel: &str, contents: &str) {
+        let path = dir.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, contents).unwrap();
+    }
+
     /// Where `wt new <branch>` puts the worktree.
     pub fn sibling(&self, branch: &str) -> PathBuf {
         self.root.join(format!("proj-{branch}"))

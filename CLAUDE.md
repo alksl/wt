@@ -43,3 +43,6 @@ repositories from `TestRepo` in `tests/common/mod.rs`. The repo sits at `<tmp>/p
 land beside it as `<tmp>/proj-<branch>`. Git runs with no system or global config and `LC_ALL=C`,
 so tests may match git's English messages. Build a test's starting state with plain `git` through
 the fixture rather than with `wt`, so one command's tests don't depend on another command working.
+
+`tests/acceptance.rs` is the exception: whole workflows (create, switch, list, remove, prune) run
+through `wt` itself on `TestRepo::toy()`, a small project with real files and an origin.
