@@ -63,6 +63,16 @@ fn marks_a_worktree_whose_directory_is_gone_as_prunable_like_git() {
     assert_matches_git(&repo);
 }
 
+#[test]
+fn quotes_unusual_paths_like_git() {
+    let repo = TestRepo::new();
+    repo.add_worktree("日本語");
+    repo.add_worktree("say-\"hi\"");
+    repo.add_worktree("plain");
+
+    assert_matches_git(&repo);
+}
+
 #[track_caller]
 fn assert_matches_git(repo: &TestRepo) {
     let out = repo.wt(&repo.main, &["list"]);

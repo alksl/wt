@@ -81,6 +81,14 @@ impl Repo {
         Ok(all)
     }
 
+    /// `core.quotePath`: whether git escapes non-ASCII bytes when it prints a path.
+    pub fn quotes_paths_fully(&self) -> bool {
+        self.repo
+            .config_snapshot()
+            .boolean("core.quotePath")
+            .unwrap_or(true)
+    }
+
     /// The main worktree's path, even when running from a linked one.
     pub fn main_worktree(&self) -> Result<&Path> {
         let path = try_init(&self.main_worktree, || {
