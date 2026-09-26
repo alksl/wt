@@ -7,7 +7,7 @@ pub fn run(branch: &str, create: bool) -> Result<()> {
     let repo = Repo::discover()?;
 
     if create {
-        cmd::new::run(branch)?;
+        cmd::new::create(&repo, branch)?;
     }
 
     let resolves_to_main = [repo.default_branch()?, repo.main_branch()?].contains(&Some(branch));

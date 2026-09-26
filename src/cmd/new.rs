@@ -3,8 +3,11 @@ use anyhow::{Result, bail};
 use crate::{git, log, repo::Repo};
 
 pub fn run(branch: &str) -> Result<()> {
-    let repo = Repo::discover()?;
+    create(&Repo::discover()?, branch)
+}
 
+/// `run` against an already discovered repository, for `switch --create`.
+pub fn create(repo: &Repo, branch: &str) -> Result<()> {
     if let Some(existing) = repo.worktree_for_branch(branch)? {
         bail!(
             "A worktree for branch '{branch}' already exists at: {}",
