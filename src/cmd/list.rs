@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::io::Write;
 
 use anyhow::Result;
+use unicode_width::UnicodeWidthChar;
 
 use crate::repo::Repo;
 
@@ -15,10 +16,7 @@ pub fn run() -> Result<()> {
         .iter()
         .map(|w| quote_c_style(w.path.as_os_str().as_encoded_bytes(), fully))
         .collect();
-    let widths: Vec<_> = paths
-        .iter()
-        .map(|p| String::from_utf8_lossy(p).chars().count())
-        .collect();
+    let widths: Vec<_> = paths.iter().map(|p| display_width(p)).collect();
     let heads: Vec<_> = worktrees
         .iter()
         .map(|w| w.head_short.as_deref().unwrap_or("0000000"))
@@ -43,6 +41,15 @@ pub fn run() -> Result<()> {
         )?;
     }
     Ok(())
+}
+
+/// git's `utf8_strwidth`: the sum of each character's column width, or the byte count when
+/// `text` isn't valid UTF-8.
+fn display_width(text: &[u8]) -> usize {
+    match std::str::from_utf8(text) {
+        Ok(text) => text.chars().map(|c| c.width().unwrap_or(0)).sum(),
+        Err(_) => text.len(),
+    }
 }
 
 /// git's `quote_c_style`: wrap in double quotes and backslash-escape control characters, `"`

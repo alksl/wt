@@ -73,6 +73,17 @@ fn quotes_unusual_paths_like_git() {
     assert_matches_git(&repo);
 }
 
+#[test]
+fn pads_unquoted_paths_by_display_width_like_git() {
+    let repo = TestRepo::new();
+    repo.git(&repo.main, &["config", "core.quotePath", "false"]);
+    repo.add_worktree("日本語");
+    repo.add_worktree("cafe\u{301}");
+    repo.add_worktree("plain");
+
+    assert_matches_git(&repo);
+}
+
 #[track_caller]
 fn assert_matches_git(repo: &TestRepo) {
     let out = repo.wt(&repo.main, &["list"]);
