@@ -25,6 +25,26 @@ fn main_branch_resolves_to_the_main_worktree() {
 }
 
 #[test]
+fn create_keeps_stdout_to_the_path() {
+    let repo = TestRepo::new();
+
+    let out = repo.wt(&repo.main, &["sw", "-c", "feat"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("{}\n", repo.sibling("feat").display()));
+}
+
+#[test]
+fn create_has_a_long_form() {
+    let repo = TestRepo::new();
+
+    let out = repo.wt(&repo.main, &["switch", "--create", "feat"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("{}\n", repo.sibling("feat").display()));
+}
+
+#[test]
 fn fails_without_a_worktree() {
     let repo = TestRepo::new();
 

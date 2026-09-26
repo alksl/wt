@@ -1,13 +1,13 @@
 use anyhow::{Result, bail};
 
-use crate::repo::Repo;
+use crate::{cmd, repo::Repo};
 
 /// Prints the worktree path and nothing else on stdout: the shell function cds to it.
 pub fn run(branch: &str, create: bool) -> Result<()> {
     let repo = Repo::discover()?;
 
     if create {
-        bail!("wt switch --create is not implemented yet")
+        cmd::new::run(branch)?;
     }
 
     let resolves_to_main = matches!(branch, "main" | "master")
