@@ -23,6 +23,48 @@ fn matches_git_worktree_list() {
     repo.add_worktree("a-longer-branch-name");
     repo.add_worktree("b");
 
+    assert_matches_git(&repo);
+}
+
+#[test]
+fn marks_a_locked_worktree_like_git() {
+    let repo = TestRepo::new();
+    let locked = repo.add_worktree("locked");
+    let reasoned = repo.add_worktree("reasoned");
+    repo.add_worktree("free");
+    repo.git(&repo.main, &["worktree", "lock", locked.to_str().unwrap()]);
+    repo.git(
+        &repo.main,
+        &[
+            "worktree",
+            "lock",
+            "--reason",
+            "on a USB stick",
+            reasoned.to_str().unwrap(),
+        ],
+    );
+
+    assert_matches_git(&repo);
+}
+
+#[test]
+fn marks_a_worktree_whose_directory_is_gone_as_prunable_like_git() {
+    let repo = TestRepo::new();
+    let gone = repo.add_worktree("gone");
+    let gone_but_locked = repo.add_worktree("gone-but-locked");
+    repo.add_worktree("present");
+    repo.git(
+        &repo.main,
+        &["worktree", "lock", gone_but_locked.to_str().unwrap()],
+    );
+    std::fs::remove_dir_all(&gone).unwrap();
+    std::fs::remove_dir_all(&gone_but_locked).unwrap();
+
+    assert_matches_git(&repo);
+}
+
+#[track_caller]
+fn assert_matches_git(repo: &TestRepo) {
     let out = repo.wt(&repo.main, &["list"]);
 
     assert_ok(&out);

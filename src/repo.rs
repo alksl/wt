@@ -13,6 +13,10 @@ pub struct Worktree {
     /// Abbreviated HEAD commit, as `git worktree list` shows it; `None` before the first commit.
     pub head_short: Option<String>,
     pub is_main: bool,
+    /// `git worktree lock`ed; never set on the main worktree.
+    pub locked: bool,
+    /// What `git worktree prune` would remove: its checkout is gone and it isn't locked.
+    pub prunable: bool,
 }
 
 /// Each fact is read at most once, on first use, and kept for the rest of the run: shell
@@ -54,10 +58,15 @@ impl Repo {
                     .base()
                     .context("Could not read a worktree's location")?;
                 let path = path.canonicalize().unwrap_or(path);
+                let (locked, prunable) = (proxy.is_locked(), proxy.is_prunable());
                 let repo = proxy
                     .into_repo_with_possibly_inaccessible_worktree()
                     .with_context(|| format!("Could not open worktree {}", path.display()))?;
-                linked.push(describe(&repo, path, false)?);
+                linked.push(Worktree {
+                    locked,
+                    prunable,
+                    ..describe(&repo, path, false)?
+                });
             }
             // git sorts linked worktrees bytewise by path, not by their id under .git/worktrees.
             linked.sort_by(|a, b| {
@@ -235,5 +244,7 @@ fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Work
         branch,
         head_short,
         is_main,
+        locked: false,
+        prunable: false,
     })
 }

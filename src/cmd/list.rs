@@ -2,7 +2,8 @@ use anyhow::Result;
 
 use crate::repo::Repo;
 
-/// Same shape as `git worktree list`: path, short HEAD, `[branch]` or `(detached HEAD)`.
+/// Same shape as `git worktree list`: path, short HEAD, `[branch]` or `(detached HEAD)`, then
+/// ` locked` and ` prunable` where they apply.
 pub fn run() -> Result<()> {
     let repo = Repo::discover()?;
     let worktrees = repo.worktrees()?;
@@ -22,8 +23,10 @@ pub fn run() -> Result<()> {
             Some(b) => format!("[{b}]"),
             None => "(detached HEAD)".to_string(),
         };
+        let locked = if wt.locked { " locked" } else { "" };
+        let prunable = if wt.prunable { " prunable" } else { "" };
         println!(
-            "{:<path_width$} {head:<head_width$} {branch}",
+            "{:<path_width$} {head:<head_width$} {branch}{locked}{prunable}",
             wt.path.display()
         );
     }
