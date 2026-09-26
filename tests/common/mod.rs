@@ -163,3 +163,13 @@ pub fn stderr(out: &Output) -> String {
 pub fn assert_ok(out: &Output) {
     assert!(out.status.success(), "wt failed:\n{}", stderr(out));
 }
+
+/// Asserts `wt` wrote `needle` to stderr, showing all of stderr when it didn't.
+#[track_caller]
+pub fn assert_stderr_contains(out: &Output, needle: &str) {
+    let stderr = stderr(out);
+    assert!(
+        stderr.contains(needle),
+        "missing {needle:?} in stderr:\n{stderr}"
+    );
+}

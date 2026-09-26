@@ -10,7 +10,8 @@ fn shows_each_worktree_with_its_branch() {
     let out = repo.wt(&repo.main, &["list"]);
 
     assert_ok(&out);
-    let lines: Vec<_> = stdout(&out).lines().map(str::to_owned).collect();
+    let stdout = stdout(&out);
+    let lines: Vec<_> = stdout.lines().collect();
     assert_eq!(lines.len(), 2);
     assert!(lines[0].starts_with(repo.main.to_str().unwrap()) && lines[0].ends_with("[main]"));
     assert!(lines[1].starts_with(feat.to_str().unwrap()) && lines[1].ends_with("[feat]"));

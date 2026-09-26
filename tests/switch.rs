@@ -1,6 +1,6 @@
 mod common;
 
-use common::{TestRepo, assert_ok, stderr, stdout};
+use common::{TestRepo, assert_ok, assert_stderr_contains, stdout};
 
 #[test]
 fn prints_only_the_worktree_path() {
@@ -58,7 +58,7 @@ fn fails_without_a_worktree() {
 
     assert!(!out.status.success());
     assert_eq!(stdout(&out), "");
-    assert!(stderr(&out).contains("No worktree found for branch 'nope'"));
+    assert_stderr_contains(&out, "No worktree found for branch 'nope'");
 }
 
 #[test]
@@ -82,9 +82,5 @@ fn master_is_not_special() {
     let out = repo.wt(&repo.main, &["sw", "master"]);
 
     assert!(!out.status.success());
-    assert!(
-        stderr(&out).contains("No worktree found for branch 'master'"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, "No worktree found for branch 'master'");
 }

@@ -1,6 +1,6 @@
 mod common;
 
-use common::{TestRepo, assert_ok, stderr, stdout};
+use common::{TestRepo, assert_ok, assert_stderr_contains, stdout};
 
 #[test]
 fn creates_the_branch_from_head_in_a_sibling_directory() {
@@ -81,7 +81,7 @@ fn refuses_a_branch_that_already_has_a_worktree() {
     let out = repo.wt(&repo.main, &["new", "feat"]);
 
     assert!(!out.status.success());
-    assert!(stderr(&out).contains(feat.to_str().unwrap()));
+    assert_stderr_contains(&out, feat.to_str().unwrap());
 }
 
 #[test]
@@ -92,6 +92,6 @@ fn refuses_when_the_target_directory_exists() {
     let out = repo.wt(&repo.main, &["new", "feat"]);
 
     assert!(!out.status.success());
-    assert!(stderr(&out).contains("Target directory already exists"));
+    assert_stderr_contains(&out, "Target directory already exists");
     assert_eq!(repo.git(&repo.main, &["branch", "--list", "feat"]), "");
 }

@@ -1,6 +1,6 @@
 mod common;
 
-use common::{TestRepo, assert_ok, stderr};
+use common::{TestRepo, assert_ok, assert_stderr_contains, stderr};
 
 #[test]
 fn removes_a_worktree_whose_commits_are_merged() {
@@ -14,7 +14,7 @@ fn removes_a_worktree_whose_commits_are_merged() {
     assert_ok(&out);
     assert!(!feat.exists());
     let expected = format!("Removed merged worktree: {} (branch: feat)", feat.display());
-    assert!(stderr(&out).contains(&expected), "{}", stderr(&out));
+    assert_stderr_contains(&out, &expected);
 }
 
 #[test]
@@ -27,11 +27,7 @@ fn keeps_a_worktree_with_unmerged_commits() {
 
     assert_ok(&out);
     assert!(feat.exists());
-    assert!(
-        stderr(&out).contains("No merged worktrees found"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, "No merged worktrees found");
 }
 
 #[test]
@@ -47,12 +43,8 @@ fn keeps_a_fresh_branch_that_is_trivially_an_ancestor() {
         "Keeping worktree with no commits of its own: {} (branch: feat)",
         feat.display()
     );
-    assert!(stderr(&out).contains(&expected), "{}", stderr(&out));
-    assert!(
-        stderr(&out).contains("No merged worktrees found"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, &expected);
+    assert_stderr_contains(&out, "No merged worktrees found");
 }
 
 #[test]
@@ -67,11 +59,7 @@ fn keeps_a_merged_branch_whose_reflog_is_missing() {
 
     assert_ok(&out);
     assert!(feat.exists());
-    assert!(
-        stderr(&out).contains("Keeping worktree with no commits of its own"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, "Keeping worktree with no commits of its own");
 }
 
 #[test]
@@ -94,7 +82,7 @@ fn a_refused_removal_fails_after_removing_the_rest() {
         "Could not remove worktree: {} (branch: dirty)",
         dirty.display()
     );
-    assert!(stderr(&out).contains(&expected), "{}", stderr(&out));
+    assert_stderr_contains(&out, &expected);
     assert!(
         !stderr(&out).contains("No merged worktrees found"),
         "{}",
@@ -116,11 +104,7 @@ fn uses_origin_head_as_the_default_branch() {
 
     assert_ok(&out);
     assert!(!feat.exists());
-    assert!(
-        stderr(&out).contains("Using default branch: trunk"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, "Using default branch: trunk");
 }
 
 #[test]
@@ -135,11 +119,7 @@ fn falls_back_to_the_main_worktrees_branch_whatever_its_name() {
 
     assert_ok(&out);
     assert!(!feat.exists());
-    assert!(
-        stderr(&out).contains("Using default branch: trunk"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, "Using default branch: trunk");
 }
 
 #[test]
@@ -150,11 +130,7 @@ fn fails_without_origin_head_and_with_a_detached_main_worktree() {
     let out = repo.wt(&repo.main, &["prune"]);
 
     assert!(!out.status.success());
-    assert!(
-        stderr(&out).contains("Could not determine default branch"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, "Could not determine default branch");
 }
 
 #[test]

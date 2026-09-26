@@ -1,6 +1,6 @@
 mod common;
 
-use common::{TestRepo, assert_ok, stderr, stdout};
+use common::{TestRepo, assert_ok, assert_stderr_contains, stderr, stdout};
 
 #[test]
 fn help_lists_the_commands_with_their_aliases() {
@@ -43,11 +43,7 @@ fn logs_without_colour_when_stderr_is_not_a_terminal() {
 
     let out = repo.wt(&repo.main, &["sw", "nope"]);
 
-    assert!(
-        stderr(&out).contains("No worktree found"),
-        "{}",
-        stderr(&out)
-    );
+    assert_stderr_contains(&out, "No worktree found");
     assert!(!stderr(&out).contains('\x1b'), "{:?}", stderr(&out));
 }
 
