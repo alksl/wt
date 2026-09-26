@@ -68,6 +68,15 @@ impl Repo {
         Ok(parent.join(format!("{}-{branch}", name.to_string_lossy())))
     }
 
+    /// The worktree that has `branch` checked out, if any.
+    pub fn worktree_for_branch(&self, branch: &str) -> Result<Option<PathBuf>> {
+        Ok(self
+            .worktrees()?
+            .into_iter()
+            .find(|wt| wt.branch.as_deref() == Some(branch))
+            .map(|wt| wt.path))
+    }
+
     /// The branch checked out in the main worktree, if it isn't detached.
     pub fn main_branch(&self) -> Result<Option<String>> {
         let main = self.repo.main_repo().context("Could not open the main worktree")?;

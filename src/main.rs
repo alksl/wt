@@ -1,4 +1,5 @@
 mod cmd;
+mod git;
 mod log;
 mod repo;
 
