@@ -68,6 +68,19 @@ impl Repo {
         Ok(parent.join(format!("{}-{branch}", name.to_string_lossy())))
     }
 
+    pub fn local_branch_exists(&self, branch: &str) -> Result<bool> {
+        self.ref_exists(&format!("refs/heads/{branch}"))
+    }
+
+    pub fn remote_branch_exists(&self, remote: &str, branch: &str) -> Result<bool> {
+        self.ref_exists(&format!("refs/remotes/{remote}/{branch}"))
+    }
+
+    fn ref_exists(&self, name: &str) -> Result<bool> {
+        let found = self.repo.try_find_reference(name).with_context(|| format!("Could not read {name}"))?;
+        Ok(found.is_some())
+    }
+
     /// The worktree that has `branch` checked out, if any.
     pub fn worktree_for_branch(&self, branch: &str) -> Result<Option<PathBuf>> {
         Ok(self
