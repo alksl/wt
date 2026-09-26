@@ -74,11 +74,11 @@ fn a_feature_from_start_to_prune() {
 }
 
 #[test]
-fn picking_up_a_branch_that_only_origin_has() {
+fn reviewing_a_colleagues_branch_from_origin() {
     let repo = TestRepo::toy();
     assert!(!branch_exists(&repo, "remote-feature"));
 
-    let path = wt_ok(&repo, &repo.main, &["sw", "-c", "remote-feature"]);
+    let path = wt_ok(&repo, &repo.main, &["sw", "remote-feature"]);
     let feature = repo.sibling("remote-feature");
     assert_eq!(path, format!("{}\n", feature.display()));
     assert!(
@@ -95,7 +95,7 @@ fn picking_up_a_branch_that_only_origin_has() {
         format!("{}\n", repo.main.display())
     );
 
-    wt_ok(&repo, &repo.main, &["remove", "remote-feature"]);
+    wt_ok(&repo, &repo.main, &["rm", "remote-feature"]);
     assert!(!feature.exists());
     assert_eq!(
         git_worktrees(&repo),

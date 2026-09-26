@@ -19,9 +19,11 @@ enum Command {
     /// Create a worktree for a branch, creating the branch if needed
     New { branch: String },
     /// Print the worktree path for a branch; the shell function cds to it
+    ///
+    /// A local or origin branch without a worktree gets one first.
     #[command(visible_alias = "sw")]
     Switch {
-        /// Create the worktree first
+        /// Also create a branch that exists nowhere yet, from HEAD
         #[arg(short, long)]
         create: bool,
         branch: String,

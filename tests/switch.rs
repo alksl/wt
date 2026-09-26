@@ -84,3 +84,35 @@ fn master_is_not_special() {
     assert!(!out.status.success());
     assert_stderr_contains(&out, "No worktree found for branch 'master'");
 }
+
+#[test]
+fn creates_the_worktree_for_a_branch_only_origin_has() {
+    let repo = TestRepo::toy();
+
+    let out = repo.wt(&repo.main, &["sw", "remote-feature"]);
+
+    assert_ok(&out);
+    let path = repo.sibling("remote-feature");
+    assert_eq!(stdout(&out), format!("{}\n", path.display()));
+    assert_eq!(
+        repo.git(&path, &["rev-parse", "--abbrev-ref", "@{upstream}"]),
+        "origin/remote-feature"
+    );
+    assert_stderr_contains(&out, "tracking origin/remote-feature");
+}
+
+#[test]
+fn creates_the_worktree_for_a_local_branch_without_one() {
+    let repo = TestRepo::new();
+    repo.git(&repo.main, &["branch", "feat"]);
+    repo.commit(&repo.main, "after feat");
+    let feat_tip = repo.git(&repo.main, &["rev-parse", "feat"]);
+
+    let out = repo.wt(&repo.main, &["sw", "feat"]);
+
+    assert_ok(&out);
+    let path = repo.sibling("feat");
+    assert_eq!(stdout(&out), format!("{}\n", path.display()));
+    assert_eq!(repo.git(&path, &["rev-parse", "HEAD"]), feat_tip);
+    assert_stderr_contains(&out, "Using existing branch 'feat'");
+}
