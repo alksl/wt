@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 
 use crate::{git, log, repo::Repo};
 
@@ -6,13 +6,13 @@ use crate::{git, log, repo::Repo};
 /// so the reflog check is what separates merged work from an untouched workspace.
 pub fn run() -> Result<()> {
     let repo = Repo::discover()?;
-    let default_branch = repo.default_branch()?;
+    let default_branch = repo.default_branch()?.context("Could not determine default branch")?;
     log::info(&format!("Using default branch: {default_branch}"));
 
     let mut pruned = 0;
     let mut failed = 0;
 
-    for wt in repo.worktrees()?.into_iter().filter(|w| !w.is_main) {
+    for wt in repo.worktrees()?.into_iter().filter(|w| !w.is_main && !w.is_default) {
         let Some(branch) = &wt.branch else { continue };
         if !repo.is_ancestor(branch, &default_branch)? {
             continue;

@@ -27,10 +27,11 @@ never produces `repo-a-b`. Refuse if the branch is already checked out in some w
 target directory exists. Then pick the branch source: existing local branch, else create it
 tracking `origin/<branch>`, else create it from HEAD. Finally `git worktree add <path> <branch>`.
 
-**switch `[-c|--create] <branch>` (alias `sw`).** `--create` runs `new` first. `main`, `master` and
-whatever the main worktree has checked out resolve to the main worktree; anything else to the
-sibling path. Error if that directory doesn't exist. Note it checks the *directory*, not the
-worktree list — a worktree created outside `wt` under another name isn't reachable by `switch`.
+**switch `[-c|--create] <branch>` (alias `sw`).** `--create` runs `new` first. The default branch
+(see prune) and whatever the main worktree has checked out resolve to the main worktree, whatever
+their names; anything else to the sibling path. Error if that directory doesn't exist. Note it
+checks the *directory*, not the worktree list — a worktree created outside `wt` under another name
+isn't reachable by `switch`.
 
 **remove `<branch>` (alias `rm`).** Find the worktree with that branch checked out and
 `git worktree remove` it. Never `--force`.
@@ -38,8 +39,9 @@ worktree list — a worktree created outside `wt` under another name isn't reach
 **list.** Same output as `git worktree list`: path, short HEAD, `[branch]` or `(detached HEAD)`,
 with paths padded to align.
 
-**prune.** Default branch is `origin/HEAD`'s target, falling back to local `main`, then `master`,
-else fail. For every linked worktree with a branch: if the branch is an ancestor of the default
+**prune.** Default branch is `origin/HEAD`'s target, falling back to the branch the main worktree
+has checked out, else fail. The worktree holding the default branch is never removed. For every
+other linked worktree with a branch: if the branch is an ancestor of the default
 branch *and* its reflog has more than one entry, remove it. An ancestor with a single-entry (or
 missing) reflog is an untouched fresh branch and is kept with a warning. Exit non-zero if any
 removal was refused.

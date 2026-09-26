@@ -122,3 +122,17 @@ fn fails_without_origin_head_and_with_a_detached_main_worktree() {
     assert!(!out.status.success());
     assert!(stderr(&out).contains("Could not determine default branch"), "{}", stderr(&out));
 }
+
+#[test]
+fn never_removes_the_worktree_holding_the_default_branch() {
+    let repo = TestRepo::with_origin();
+    repo.git(&repo.main, &["checkout", "--quiet", "-b", "hotfix"]);
+    let default = repo.sibling("main");
+    repo.git(&repo.main, &["worktree", "add", "--quiet", default.to_str().unwrap(), "main"]);
+    repo.commit(&default, "work on the default branch");
+
+    let out = repo.wt(&repo.main, &["prune"]);
+
+    assert_ok(&out);
+    assert!(default.exists());
+}

@@ -54,3 +54,27 @@ fn fails_without_a_worktree() {
     assert_eq!(stdout(&out), "");
     assert!(stderr(&out).contains("No worktree found for branch 'nope'"));
 }
+
+#[test]
+fn the_default_branch_resolves_to_the_main_worktree_whatever_its_name() {
+    let repo = TestRepo::with_origin();
+    repo.git(&repo.main, &["branch", "--quiet", "trunk"]);
+    repo.git(&repo.main, &["push", "--quiet", "origin", "trunk"]);
+    repo.git(&repo.main, &["remote", "set-head", "origin", "trunk"]);
+    repo.git(&repo.main, &["checkout", "--quiet", "-b", "hotfix"]);
+
+    let out = repo.wt(&repo.main, &["sw", "trunk"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("{}\n", repo.main.display()));
+}
+
+#[test]
+fn master_is_not_special() {
+    let repo = TestRepo::new();
+
+    let out = repo.wt(&repo.main, &["sw", "master"]);
+
+    assert!(!out.status.success());
+    assert!(stderr(&out).contains("No worktree found for branch 'master'"), "{}", stderr(&out));
+}

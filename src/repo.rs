@@ -11,6 +11,8 @@ pub struct Worktree {
     /// Abbreviated HEAD commit, as `git worktree list` shows it; `None` before the first commit.
     pub head_short: Option<String>,
     pub is_main: bool,
+    /// Checked out on the default branch; see `Repo::default_branch`.
+    pub is_default: bool,
 }
 
 pub struct Repo {
@@ -42,6 +44,11 @@ impl Repo {
         // git sorts linked worktrees bytewise by path, not by their id under .git/worktrees.
         linked.sort_by(|a, b| a.path.as_os_str().as_encoded_bytes().cmp(b.path.as_os_str().as_encoded_bytes()));
         all.extend(linked);
+
+        let default = self.default_branch()?;
+        for wt in &mut all {
+            wt.is_default = default.is_some() && wt.branch == default;
+        }
         Ok(all)
     }
 
@@ -99,16 +106,16 @@ impl Repo {
 
     /// `origin/HEAD`'s target, else the branch checked out in the main worktree, which by convention
     /// stays on the default branch.
-    pub fn default_branch(&self) -> Result<String> {
+    pub fn default_branch(&self) -> Result<Option<String>> {
         let origin_head = self
             .repo
             .try_find_reference("refs/remotes/origin/HEAD")
             .context("Could not read refs/remotes/origin/HEAD")?;
         if let Some(gix::refs::TargetRef::Symbolic(target)) = origin_head.as_ref().map(|r| r.target()) {
             let target = target.as_bstr().to_string();
-            return Ok(target.strip_prefix("refs/remotes/origin/").unwrap_or(&target).to_string());
+            return Ok(Some(target.strip_prefix("refs/remotes/origin/").unwrap_or(&target).to_string()));
         }
-        self.main_branch()?.context("Could not determine default branch")
+        self.main_branch()
     }
 
     /// Whether local `branch` is reachable from `target`, like `git merge-base --is-ancestor`.
@@ -155,5 +162,5 @@ fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Work
         .with_context(|| format!("Could not read HEAD of {}", path.display()))?;
     let branch = head.referent_name().map(|name| name.shorten().to_string());
     let head_short = head.id().map(|id| id.shorten_or_id().to_string());
-    Ok(Worktree { path, branch, head_short, is_main })
+    Ok(Worktree { path, branch, head_short, is_main, is_default: false })
 }
