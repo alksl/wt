@@ -96,6 +96,57 @@ impl Repo {
         let head = main.head().context("Could not read the main worktree's HEAD")?;
         Ok(head.referent_name().map(|name| name.shorten().to_string()))
     }
+
+    /// `origin/HEAD`'s target, else the branch checked out in the main worktree, which by convention
+    /// stays on the default branch.
+    pub fn default_branch(&self) -> Result<String> {
+        let origin_head = self
+            .repo
+            .try_find_reference("refs/remotes/origin/HEAD")
+            .context("Could not read refs/remotes/origin/HEAD")?;
+        if let Some(gix::refs::TargetRef::Symbolic(target)) = origin_head.as_ref().map(|r| r.target()) {
+            let target = target.as_bstr().to_string();
+            return Ok(target.strip_prefix("refs/remotes/origin/").unwrap_or(&target).to_string());
+        }
+        self.main_branch()?.context("Could not determine default branch")
+    }
+
+    /// Whether local `branch` is reachable from `target`, like `git merge-base --is-ancestor`.
+    pub fn is_ancestor(&self, branch: &str, target: &str) -> Result<bool> {
+        let branch_id = self
+            .repo
+            .rev_parse_single(format!("refs/heads/{branch}").as_str())
+            .with_context(|| format!("Could not resolve branch '{branch}'"))?
+            .detach();
+        let target_id = self
+            .repo
+            .rev_parse_single(target)
+            .with_context(|| format!("Could not resolve '{target}'"))?
+            .detach();
+        let bases = self
+            .repo
+            .merge_bases_many(branch_id, &[target_id])
+            .with_context(|| format!("Could not find a merge base of '{branch}' and '{target}'"))?;
+        Ok(bases.iter().any(|base| *base == branch_id))
+    }
+
+    /// Whether `branch` moved after it was created: its reflog has more than one entry, as counted
+    /// by `git reflog show refs/heads/<branch>`. A missing reflog counts as no.
+    pub fn branch_has_own_commits(&self, branch: &str) -> Result<bool> {
+        let Some(reference) = self.local_ref(branch)? else { return Ok(false) };
+        let mut platform = reference.log_iter();
+        let entries = platform
+            .all()
+            .with_context(|| format!("Could not read the reflog of '{branch}'"))?
+            .map_or(0, |log| log.take(2).count());
+        Ok(entries > 1)
+    }
+
+    fn local_ref(&self, branch: &str) -> Result<Option<gix::Reference<'_>>> {
+        self.repo
+            .try_find_reference(format!("refs/heads/{branch}").as_str())
+            .with_context(|| format!("Could not read branch '{branch}'"))
+    }
 }
 
 fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Worktree> {
