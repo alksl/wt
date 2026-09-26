@@ -1,6 +1,6 @@
 mod common;
 
-use common::{TestRepo, assert_ok, stdout};
+use common::{TestRepo, assert_ok, stderr, stdout};
 
 #[test]
 fn help_lists_the_commands_with_their_aliases() {
@@ -24,4 +24,23 @@ fn switch_takes_create_as_short_and_long_flag() {
 
     assert_ok(&out);
     assert!(stdout(&out).contains("-c, --create"));
+}
+
+#[test]
+fn logs_without_colour_when_stderr_is_not_a_terminal() {
+    let repo = TestRepo::new();
+
+    let out = repo.wt(&repo.main, &["sw", "nope"]);
+
+    assert!(stderr(&out).contains("No worktree found"), "{}", stderr(&out));
+    assert!(!stderr(&out).contains('\x1b'), "{:?}", stderr(&out));
+}
+
+#[test]
+fn logs_in_colour_when_forced() {
+    let repo = TestRepo::new();
+
+    let out = repo.wt_env(&repo.main, &["sw", "nope"], &[("CLICOLOR_FORCE", "1")]);
+
+    assert!(stderr(&out).contains("\x1b["), "{:?}", stderr(&out));
 }

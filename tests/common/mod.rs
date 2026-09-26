@@ -63,11 +63,20 @@ impl TestRepo {
 
     /// Runs `wt` in `dir` without asserting on the outcome.
     pub fn wt(&self, dir: &Path, args: &[&str]) -> Output {
-        self.isolated(&mut Command::new(env!("CARGO_BIN_EXE_wt"))).current_dir(dir).args(args).output().unwrap()
+        self.wt_env(dir, args, &[])
+    }
+
+    /// Runs `wt` in `dir` with extra environment variables.
+    pub fn wt_env(&self, dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Output {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_wt"));
+        self.isolated(&mut cmd).current_dir(dir).args(args).envs(env.iter().copied());
+        cmd.output().unwrap()
     }
 
     fn isolated<'a>(&self, cmd: &'a mut Command) -> &'a mut Command {
-        cmd.env("HOME", &self.root)
+        cmd.env_remove("CLICOLOR_FORCE")
+            .env_remove("NO_COLOR")
+            .env("HOME", &self.root)
             .env("LC_ALL", "C")
             .env("GIT_CONFIG_NOSYSTEM", "1")
             .env("GIT_CONFIG_GLOBAL", "/dev/null")
