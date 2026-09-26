@@ -33,6 +33,8 @@ enum Command {
     List,
     /// Remove worktrees whose branch is merged into the default branch
     Prune,
+    /// Print shell integration to eval from your rc file: eval "$(wt init zsh)"
+    Init { shell: cmd::init::Shell },
     /// Print candidates for shell completion
     #[command(hide = true)]
     Complete { subcommand: String },
@@ -46,6 +48,7 @@ fn main() -> ExitCode {
         Command::Remove { branch } => cmd::remove::run(&branch),
         Command::List => cmd::list::run(),
         Command::Prune => cmd::prune::run(),
+        Command::Init { shell } => cmd::init::run(shell),
         Command::Complete { subcommand } => cmd::complete::run(&subcommand),
     };
     match result {

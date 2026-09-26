@@ -30,10 +30,11 @@ variant. Each command lives in its own file under `src/cmd/`.
 
 ## Contracts with callers outside this repo
 
-- `wt switch` prints the worktree path and nothing else on stdout; the zsh function in
-  `midgard/dotfiles/zsh/functions/wt` cds to it. All logging therefore goes to stderr.
-- `wt complete switch|remove` (hidden) prints one branch per line for the fzf completion in
-  `midgard/dotfiles/zsh/completion.zsh`.
+- `wt switch` prints the worktree path and nothing else on stdout; the zsh function cds to it.
+  All logging therefore goes to stderr.
+- `wt complete switch|remove` (hidden) prints one branch per line for the fzf completion.
+- The zsh function and fzf completion come from `wt init zsh` (`src/cmd/init.zsh`), which the
+  user's zshrc `eval`s; there are no longer hand-kept copies in `midgard/dotfiles`.
 - nvim's `utils/worktree/git.lua` strips the `<repo>-` prefix off a worktree directory to get the
   name `wt switch` takes, so the naming scheme is load-bearing.
 
