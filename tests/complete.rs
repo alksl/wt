@@ -15,6 +15,33 @@ fn switch_offers_every_checked_out_branch() {
     assert_eq!(stdout(&out), "main\nfeat\n");
 }
 
+/// `toy()` plus a worktree on `feat`, a local-only `local-only`, and `both`, which is local and on
+/// origin, neither checked out.
+fn review_repo() -> TestRepo {
+    let repo = TestRepo::toy();
+    repo.add_worktree("feat");
+    repo.git(&repo.main, &["branch", "local-only"]);
+    repo.git(&repo.main, &["branch", "both"]);
+    repo.git(&repo.main, &["push", "--quiet", "origin", "both"]);
+    repo
+}
+
+#[test]
+fn switch_also_offers_branches_without_a_worktree_marked_by_where_they_are() {
+    let repo = review_repo();
+
+    for subcommand in ["switch", "sw"] {
+        let out = repo.wt(&repo.main, &["complete", subcommand]);
+
+        assert_ok(&out);
+        assert_eq!(
+            stdout(&out),
+            "main\nfeat\nboth\tlocal\nlocal-only\tlocal\nremote-feature\torigin\n",
+            "complete {subcommand}"
+        );
+    }
+}
+
 #[test]
 fn remove_leaves_out_the_main_worktree() {
     let repo = TestRepo::new();

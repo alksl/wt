@@ -35,6 +35,7 @@ function _fzf_complete_wt() {
     fi
 }
 
+# Candidates may carry a tab and where the branch lives (`fix-typo<TAB>origin`); insert the name.
 function _fzf_complete_wt_post() {
-    cat
+    cut -f1
 }

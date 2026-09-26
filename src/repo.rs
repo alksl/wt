@@ -30,6 +30,8 @@ pub struct Repo {
     main_branch: OnceCell<Option<String>>,
     default_branch: OnceCell<Option<String>>,
     worktrees: OnceCell<Vec<Worktree>>,
+    local_branches: OnceCell<Vec<String>>,
+    origin_branches: OnceCell<Vec<String>>,
 }
 
 impl Repo {
@@ -44,6 +46,8 @@ impl Repo {
             main_branch: OnceCell::new(),
             default_branch: OnceCell::new(),
             worktrees: OnceCell::new(),
+            local_branches: OnceCell::new(),
+            origin_branches: OnceCell::new(),
         })
     }
 
@@ -229,6 +233,41 @@ impl Repo {
                 .main_repo()
                 .context("Could not open the main worktree")
         })
+    }
+
+    /// Every local branch, by name.
+    pub fn local_branches(&self) -> Result<&[String]> {
+        let branches = try_init(&self.local_branches, || self.branches_under("refs/heads/"))?;
+        Ok(branches)
+    }
+
+    /// Every branch under `refs/remotes/origin/` as of the last fetch, by name, without `HEAD`.
+    pub fn origin_branches(&self) -> Result<&[String]> {
+        let branches = try_init(&self.origin_branches, || {
+            let mut branches = self.branches_under("refs/remotes/origin/")?;
+            branches.retain(|b| b != "HEAD");
+            Ok(branches)
+        })?;
+        Ok(branches)
+    }
+
+    /// Short names of the refs under `prefix`, sorted.
+    fn branches_under(&self, prefix: &str) -> Result<Vec<String>> {
+        let platform = self
+            .repo
+            .references()
+            .with_context(|| format!("Could not read {prefix}"))?;
+        let mut names = Vec::new();
+        for reference in platform
+            .prefixed(prefix.as_bytes())
+            .with_context(|| format!("Could not read {prefix}"))?
+        {
+            let reference = reference.with_context(|| format!("Could not read {prefix}"))?;
+            let name = reference.name().as_bstr().to_string();
+            names.push(name.strip_prefix(prefix).unwrap_or(&name).to_owned());
+        }
+        names.sort();
+        Ok(names)
     }
 }
 

@@ -144,3 +144,17 @@ fn switch_help_is_printed_not_cd_into() {
         );
     }
 }
+
+#[test]
+fn completion_inserts_only_the_branch_name() {
+    let repo = TestRepo::new();
+
+    let out = zsh(
+        &repo,
+        &repo.main,
+        r#"eval "$(wt init zsh)"; printf 'feat\nfix-typo\torigin\nlocal-only\tlocal\n' | _fzf_complete_wt_post"#,
+    );
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), "feat\nfix-typo\nlocal-only\n");
+}

@@ -120,7 +120,7 @@ fn working_from_inside_a_linked_worktree() {
     );
     assert_eq!(
         wt_ok(&repo, &second, &["complete", "switch"]),
-        "main\nfirst\nsecond\n"
+        "main\nfirst\nsecond\nremote-feature\torigin\n"
     );
 
     repo.write(&first, "notes.txt", "scratch\n");
