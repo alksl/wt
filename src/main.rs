@@ -1,5 +1,6 @@
 mod cmd;
 mod log;
+mod repo;
 
 use std::process::ExitCode;
 
