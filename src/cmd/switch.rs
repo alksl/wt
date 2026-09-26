@@ -20,7 +20,10 @@ pub fn run(branch: &str, create: bool) -> Result<()> {
     };
 
     if !path.is_dir() {
-        bail!("No worktree found for branch '{branch}' at: {}", path.display());
+        bail!(
+            "No worktree found for branch '{branch}' at: {}",
+            path.display()
+        );
     }
 
     println!("{}", path.display());

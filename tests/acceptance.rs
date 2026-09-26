@@ -29,7 +29,9 @@ fn git_worktrees(repo: &TestRepo) -> Vec<(PathBuf, String)> {
 }
 
 fn branch_exists(repo: &TestRepo, branch: &str) -> bool {
-    !repo.git(&repo.main, &["branch", "--list", branch]).is_empty()
+    !repo
+        .git(&repo.main, &["branch", "--list", branch])
+        .is_empty()
 }
 
 #[test]
@@ -39,7 +41,10 @@ fn a_feature_from_start_to_prune() {
     let path = wt_ok(&repo, &repo.main, &["switch", "--create", "login"]);
     let feature = repo.sibling("login");
     assert_eq!(path, format!("{}\n", feature.display()));
-    assert!(feature.join("src/lib.rs").is_file(), "the checkout has the project's files");
+    assert!(
+        feature.join("src/lib.rs").is_file(),
+        "the checkout has the project's files"
+    );
 
     repo.write(&feature, "src/login.rs", "pub fn login() {}\n");
     repo.git(&feature, &["add", "."]);
@@ -58,8 +63,14 @@ fn a_feature_from_start_to_prune() {
     assert_ok(&out);
     assert!(!feature.exists(), "merged work is pruned");
     assert!(repo.main.join("src/login.rs").is_file());
-    assert_eq!(git_worktrees(&repo), vec![(repo.main.clone(), "main".to_string())]);
-    assert!(branch_exists(&repo, "login"), "prune leaves the branch itself behind");
+    assert_eq!(
+        git_worktrees(&repo),
+        vec![(repo.main.clone(), "main".to_string())]
+    );
+    assert!(
+        branch_exists(&repo, "login"),
+        "prune leaves the branch itself behind"
+    );
 }
 
 #[test]
@@ -70,17 +81,26 @@ fn picking_up_a_branch_that_only_origin_has() {
     let path = wt_ok(&repo, &repo.main, &["sw", "-c", "remote-feature"]);
     let feature = repo.sibling("remote-feature");
     assert_eq!(path, format!("{}\n", feature.display()));
-    assert!(feature.join("src/feature.rs").is_file(), "the checkout has origin's commits");
+    assert!(
+        feature.join("src/feature.rs").is_file(),
+        "the checkout has origin's commits"
+    );
     assert_eq!(
         repo.git(&feature, &["rev-parse", "--abbrev-ref", "@{upstream}"]),
         "origin/remote-feature"
     );
 
-    assert_eq!(wt_ok(&repo, &feature, &["sw", "main"]), format!("{}\n", repo.main.display()));
+    assert_eq!(
+        wt_ok(&repo, &feature, &["sw", "main"]),
+        format!("{}\n", repo.main.display())
+    );
 
     wt_ok(&repo, &repo.main, &["remove", "remote-feature"]);
     assert!(!feature.exists());
-    assert_eq!(git_worktrees(&repo), vec![(repo.main.clone(), "main".to_string())]);
+    assert_eq!(
+        git_worktrees(&repo),
+        vec![(repo.main.clone(), "main".to_string())]
+    );
 }
 
 #[test]
@@ -89,13 +109,26 @@ fn working_from_inside_a_linked_worktree() {
     let first = PathBuf::from(wt_ok(&repo, &repo.main, &["sw", "-c", "first"]).trim_end());
 
     let second = PathBuf::from(wt_ok(&repo, &first, &["sw", "-c", "second"]).trim_end());
-    assert_eq!(second, repo.sibling("second"), "named after the main worktree, not this one");
-    assert_eq!(wt_ok(&repo, &second, &["sw", "first"]), format!("{}\n", first.display()));
-    assert_eq!(wt_ok(&repo, &second, &["complete", "switch"]), "main\nfirst\nsecond\n");
+    assert_eq!(
+        second,
+        repo.sibling("second"),
+        "named after the main worktree, not this one"
+    );
+    assert_eq!(
+        wt_ok(&repo, &second, &["sw", "first"]),
+        format!("{}\n", first.display())
+    );
+    assert_eq!(
+        wt_ok(&repo, &second, &["complete", "switch"]),
+        "main\nfirst\nsecond\n"
+    );
 
     repo.write(&first, "notes.txt", "scratch\n");
     let out = repo.wt(&second, &["rm", "first"]);
-    assert!(!out.status.success(), "a worktree with untracked files is refused");
+    assert!(
+        !out.status.success(),
+        "a worktree with untracked files is refused"
+    );
     assert!(first.join("notes.txt").is_file(), "{}", stderr(&out));
 
     std::fs::remove_file(first.join("notes.txt")).unwrap();
@@ -103,6 +136,9 @@ fn working_from_inside_a_linked_worktree() {
     assert!(!first.exists());
     assert_eq!(
         git_worktrees(&repo),
-        vec![(repo.main.clone(), "main".to_string()), (second, "second".to_string())]
+        vec![
+            (repo.main.clone(), "main".to_string()),
+            (second, "second".to_string())
+        ]
     );
 }

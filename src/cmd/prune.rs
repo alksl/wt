@@ -6,25 +6,37 @@ use crate::{git, log, repo::Repo};
 /// so the reflog check is what separates merged work from an untouched workspace.
 pub fn run() -> Result<()> {
     let repo = Repo::discover()?;
-    let default_branch = repo.default_branch()?.context("Could not determine default branch")?;
+    let default_branch = repo
+        .default_branch()?
+        .context("Could not determine default branch")?;
     log::info(&format!("Using default branch: {default_branch}"));
 
     let mut pruned = 0;
     let mut failed = 0;
 
-    for wt in repo.worktrees()?.into_iter().filter(|w| !w.is_main && !w.is_default) {
+    for wt in repo
+        .worktrees()?
+        .into_iter()
+        .filter(|w| !w.is_main && !w.is_default)
+    {
         let Some(branch) = &wt.branch else { continue };
         if !repo.is_ancestor(branch, &default_branch)? {
             continue;
         }
         let path = wt.path.display();
         if !repo.branch_has_own_commits(branch)? {
-            log::warn(&format!("Keeping worktree with no commits of its own: {path} (branch: {branch})"));
+            log::warn(&format!(
+                "Keeping worktree with no commits of its own: {path} (branch: {branch})"
+            ));
         } else if git::worktree_remove(&wt.path).is_ok() {
-            log::info(&format!("Removed merged worktree: {path} (branch: {branch})"));
+            log::info(&format!(
+                "Removed merged worktree: {path} (branch: {branch})"
+            ));
             pruned += 1;
         } else {
-            log::error(&format!("Could not remove worktree: {path} (branch: {branch})"));
+            log::error(&format!(
+                "Could not remove worktree: {path} (branch: {branch})"
+            ));
             failed += 1;
         }
     }

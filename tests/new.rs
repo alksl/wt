@@ -11,7 +11,10 @@ fn creates_the_branch_from_head_in_a_sibling_directory() {
     assert_ok(&out);
     let path = repo.sibling("feat");
     assert_eq!(repo.git(&path, &["branch", "--show-current"]), "feat");
-    assert_eq!(repo.git(&path, &["rev-parse", "HEAD"]), repo.git(&repo.main, &["rev-parse", "HEAD"]));
+    assert_eq!(
+        repo.git(&path, &["rev-parse", "HEAD"]),
+        repo.git(&repo.main, &["rev-parse", "HEAD"])
+    );
 }
 
 #[test]
@@ -45,7 +48,10 @@ fn uses_an_existing_local_branch() {
     let out = repo.wt(&repo.main, &["new", "feat"]);
 
     assert_ok(&out);
-    assert_eq!(repo.git(&repo.sibling("feat"), &["rev-parse", "HEAD"]), feat_tip);
+    assert_eq!(
+        repo.git(&repo.sibling("feat"), &["rev-parse", "HEAD"]),
+        feat_tip
+    );
 }
 
 #[test]
@@ -61,7 +67,10 @@ fn tracks_the_remote_branch_when_there_is_no_local_one() {
 
     assert_ok(&out);
     let path = repo.sibling("remote-only");
-    assert_eq!(repo.git(&path, &["rev-parse", "--abbrev-ref", "@{upstream}"]), "origin/remote-only");
+    assert_eq!(
+        repo.git(&path, &["rev-parse", "--abbrev-ref", "@{upstream}"]),
+        "origin/remote-only"
+    );
 }
 
 #[test]

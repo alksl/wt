@@ -10,10 +10,21 @@ fn help_lists_the_commands_with_their_aliases() {
 
     assert_ok(&out);
     let help = stdout(&out);
-    for line in ["new", "switch", "[alias: sw]", "remove", "[alias: rm]", "list", "prune"] {
+    for line in [
+        "new",
+        "switch",
+        "[alias: sw]",
+        "remove",
+        "[alias: rm]",
+        "list",
+        "prune",
+    ] {
         assert!(help.contains(line), "missing {line:?} in:\n{help}");
     }
-    assert!(!help.contains("complete"), "complete should be hidden:\n{help}");
+    assert!(
+        !help.contains("complete"),
+        "complete should be hidden:\n{help}"
+    );
 }
 
 #[test]
@@ -32,7 +43,11 @@ fn logs_without_colour_when_stderr_is_not_a_terminal() {
 
     let out = repo.wt(&repo.main, &["sw", "nope"]);
 
-    assert!(stderr(&out).contains("No worktree found"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("No worktree found"),
+        "{}",
+        stderr(&out)
+    );
     assert!(!stderr(&out).contains('\x1b'), "{:?}", stderr(&out));
 }
 

@@ -29,12 +29,17 @@ impl Repo {
 
     /// All worktrees, main first, in the order `git worktree list` prints them.
     pub fn worktrees(&self) -> Result<Vec<Worktree>> {
-        let main = self.repo.main_repo().context("Could not open the main worktree")?;
+        let main = self
+            .repo
+            .main_repo()
+            .context("Could not open the main worktree")?;
         let mut all = vec![describe(&main, self.main_worktree()?, true)?];
 
         let mut linked = Vec::new();
         for proxy in self.repo.worktrees().context("Could not list worktrees")? {
-            let path = proxy.base().context("Could not read a worktree's location")?;
+            let path = proxy
+                .base()
+                .context("Could not read a worktree's location")?;
             let path = path.canonicalize().unwrap_or(path);
             let repo = proxy
                 .into_repo_with_possibly_inaccessible_worktree()
@@ -42,7 +47,12 @@ impl Repo {
             linked.push(describe(&repo, path, false)?);
         }
         // git sorts linked worktrees bytewise by path, not by their id under .git/worktrees.
-        linked.sort_by(|a, b| a.path.as_os_str().as_encoded_bytes().cmp(b.path.as_os_str().as_encoded_bytes()));
+        linked.sort_by(|a, b| {
+            a.path
+                .as_os_str()
+                .as_encoded_bytes()
+                .cmp(b.path.as_os_str().as_encoded_bytes())
+        });
         all.extend(linked);
 
         let default = self.default_branch()?;
@@ -61,7 +71,10 @@ impl Repo {
             .canonicalize()
             .context("Could not resolve the repository's git directory")?;
         if common.file_name().is_some_and(|name| name == ".git") {
-            Ok(common.parent().expect("a .git dir has a parent").to_path_buf())
+            Ok(common
+                .parent()
+                .expect("a .git dir has a parent")
+                .to_path_buf())
         } else {
             bail!("Bare repositories are not supported: {}", common.display())
         }
@@ -70,7 +83,9 @@ impl Repo {
     /// Where `wt new` puts a branch: `<parent of main>/<main basename>-<branch>`.
     pub fn worktree_path_for(&self, branch: &str) -> Result<PathBuf> {
         let main = self.main_worktree()?;
-        let name = main.file_name().context("The main worktree has no directory name")?;
+        let name = main
+            .file_name()
+            .context("The main worktree has no directory name")?;
         let parent = main.parent().expect("a path with a file name has a parent");
         Ok(parent.join(format!("{}-{branch}", name.to_string_lossy())))
     }
@@ -84,7 +99,10 @@ impl Repo {
     }
 
     fn ref_exists(&self, name: &str) -> Result<bool> {
-        let found = self.repo.try_find_reference(name).with_context(|| format!("Could not read {name}"))?;
+        let found = self
+            .repo
+            .try_find_reference(name)
+            .with_context(|| format!("Could not read {name}"))?;
         Ok(found.is_some())
     }
 
@@ -99,8 +117,13 @@ impl Repo {
 
     /// The branch checked out in the main worktree, if it isn't detached.
     pub fn main_branch(&self) -> Result<Option<String>> {
-        let main = self.repo.main_repo().context("Could not open the main worktree")?;
-        let head = main.head().context("Could not read the main worktree's HEAD")?;
+        let main = self
+            .repo
+            .main_repo()
+            .context("Could not open the main worktree")?;
+        let head = main
+            .head()
+            .context("Could not read the main worktree's HEAD")?;
         Ok(head.referent_name().map(|name| name.shorten().to_string()))
     }
 
@@ -111,9 +134,16 @@ impl Repo {
             .repo
             .try_find_reference("refs/remotes/origin/HEAD")
             .context("Could not read refs/remotes/origin/HEAD")?;
-        if let Some(gix::refs::TargetRef::Symbolic(target)) = origin_head.as_ref().map(|r| r.target()) {
+        if let Some(gix::refs::TargetRef::Symbolic(target)) =
+            origin_head.as_ref().map(|r| r.target())
+        {
             let target = target.as_bstr().to_string();
-            return Ok(Some(target.strip_prefix("refs/remotes/origin/").unwrap_or(&target).to_string()));
+            return Ok(Some(
+                target
+                    .strip_prefix("refs/remotes/origin/")
+                    .unwrap_or(&target)
+                    .to_string(),
+            ));
         }
         self.main_branch()
     }
@@ -140,7 +170,9 @@ impl Repo {
     /// Whether `branch` moved after it was created: its reflog has more than one entry, as counted
     /// by `git reflog show refs/heads/<branch>`. A missing reflog counts as no.
     pub fn branch_has_own_commits(&self, branch: &str) -> Result<bool> {
-        let Some(reference) = self.local_ref(branch)? else { return Ok(false) };
+        let Some(reference) = self.local_ref(branch)? else {
+            return Ok(false);
+        };
         let mut platform = reference.log_iter();
         let entries = platform
             .all()
@@ -162,5 +194,11 @@ fn describe(repo: &gix::Repository, path: PathBuf, is_main: bool) -> Result<Work
         .with_context(|| format!("Could not read HEAD of {}", path.display()))?;
     let branch = head.referent_name().map(|name| name.shorten().to_string());
     let head_short = head.id().map(|id| id.shorten_or_id().to_string());
-    Ok(Worktree { path, branch, head_short, is_main, is_default: false })
+    Ok(Worktree {
+        path,
+        branch,
+        head_short,
+        is_main,
+        is_default: false,
+    })
 }

@@ -6,7 +6,10 @@ pub fn run(branch: &str) -> Result<()> {
     let repo = Repo::discover()?;
 
     if let Some(existing) = repo.worktree_for_branch(branch)? {
-        bail!("A worktree for branch '{branch}' already exists at: {}", existing.display());
+        bail!(
+            "A worktree for branch '{branch}' already exists at: {}",
+            existing.display()
+        );
     }
 
     let path = repo.worktree_path_for(branch)?;
@@ -17,7 +20,9 @@ pub fn run(branch: &str) -> Result<()> {
     if repo.local_branch_exists(branch)? {
         log::info(&format!("Using existing branch '{branch}'"));
     } else if repo.remote_branch_exists("origin", branch)? {
-        log::info(&format!("Creating local branch '{branch}' tracking origin/{branch}"));
+        log::info(&format!(
+            "Creating local branch '{branch}' tracking origin/{branch}"
+        ));
         git::branch_create(branch, Some(&format!("origin/{branch}")))?;
     } else {
         log::info(&format!("Creating branch '{branch}' from HEAD"));

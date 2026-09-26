@@ -21,7 +21,11 @@ impl TestRepo {
         let root = tmp.path().canonicalize().unwrap();
         let main = root.join("proj");
         std::fs::create_dir(&main).unwrap();
-        let repo = Self { _tmp: tmp, root, main };
+        let repo = Self {
+            _tmp: tmp,
+            root,
+            main,
+        };
         repo.git(&repo.main, &["init", "--initial-branch=main"]);
         repo.commit(&repo.main, "initial");
         repo
@@ -32,7 +36,10 @@ impl TestRepo {
         let repo = Self::new();
         let origin = repo.root.join("origin.git");
         repo.git(&repo.root, &["init", "--bare", "origin.git"]);
-        repo.git(&repo.main, &["remote", "add", "origin", origin.to_str().unwrap()]);
+        repo.git(
+            &repo.main,
+            &["remote", "add", "origin", origin.to_str().unwrap()],
+        );
         repo.git(&repo.main, &["push", "--quiet", "-u", "origin", "main"]);
         repo.git(&repo.main, &["remote", "set-head", "origin", "main"]);
         repo
@@ -43,9 +50,16 @@ impl TestRepo {
     pub fn toy() -> Self {
         let repo = Self::with_origin();
         repo.write(&repo.main, "README.md", "# toy\n");
-        repo.write(&repo.main, "src/lib.rs", "pub fn answer() -> u32 {\n    42\n}\n");
+        repo.write(
+            &repo.main,
+            "src/lib.rs",
+            "pub fn answer() -> u32 {\n    42\n}\n",
+        );
         repo.git(&repo.main, &["add", "."]);
-        repo.git(&repo.main, &["commit", "--quiet", "-m", "Add the toy project"]);
+        repo.git(
+            &repo.main,
+            &["commit", "--quiet", "-m", "Add the toy project"],
+        );
         repo.git(&repo.main, &["push", "--quiet", "origin", "main"]);
 
         repo.git(&repo.main, &["switch", "--quiet", "-c", "remote-feature"]);
@@ -73,7 +87,17 @@ impl TestRepo {
     /// Creates `branch` from HEAD with a worktree at its sibling path, without going through `wt`.
     pub fn add_worktree(&self, branch: &str) -> PathBuf {
         let path = self.sibling(branch);
-        self.git(&self.main, &["worktree", "add", "--quiet", "-b", branch, path.to_str().unwrap()]);
+        self.git(
+            &self.main,
+            &[
+                "worktree",
+                "add",
+                "--quiet",
+                "-b",
+                branch,
+                path.to_str().unwrap(),
+            ],
+        );
         path
     }
 
@@ -83,8 +107,17 @@ impl TestRepo {
 
     /// Runs git in `dir`, panicking on failure; returns trimmed stdout.
     pub fn git(&self, dir: &Path, args: &[&str]) -> String {
-        let out = self.isolated(&mut Command::new("git")).current_dir(dir).args(args).output().unwrap();
-        assert!(out.status.success(), "git {args:?} failed:\n{}", stderr(&out));
+        let out = self
+            .isolated(&mut Command::new("git"))
+            .current_dir(dir)
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "git {args:?} failed:\n{}",
+            stderr(&out)
+        );
         stdout(&out).trim().to_string()
     }
 
@@ -96,7 +129,10 @@ impl TestRepo {
     /// Runs `wt` in `dir` with extra environment variables.
     pub fn wt_env(&self, dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Output {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_wt"));
-        self.isolated(&mut cmd).current_dir(dir).args(args).envs(env.iter().copied());
+        self.isolated(&mut cmd)
+            .current_dir(dir)
+            .args(args)
+            .envs(env.iter().copied());
         cmd.output().unwrap()
     }
 

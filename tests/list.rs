@@ -25,5 +25,8 @@ fn matches_git_worktree_list() {
     let out = repo.wt(&repo.main, &["list"]);
 
     assert_ok(&out);
-    assert_eq!(stdout(&out).trim_end(), repo.git(&repo.main, &["worktree", "list"]));
+    assert_eq!(
+        stdout(&out).trim_end(),
+        repo.git(&repo.main, &["worktree", "list"])
+    );
 }

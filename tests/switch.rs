@@ -31,7 +31,10 @@ fn create_keeps_stdout_to_the_path() {
     let out = repo.wt(&repo.main, &["sw", "-c", "feat"]);
 
     assert_ok(&out);
-    assert_eq!(stdout(&out), format!("{}\n", repo.sibling("feat").display()));
+    assert_eq!(
+        stdout(&out),
+        format!("{}\n", repo.sibling("feat").display())
+    );
 }
 
 #[test]
@@ -41,7 +44,10 @@ fn create_has_a_long_form() {
     let out = repo.wt(&repo.main, &["switch", "--create", "feat"]);
 
     assert_ok(&out);
-    assert_eq!(stdout(&out), format!("{}\n", repo.sibling("feat").display()));
+    assert_eq!(
+        stdout(&out),
+        format!("{}\n", repo.sibling("feat").display())
+    );
 }
 
 #[test]
@@ -76,5 +82,9 @@ fn master_is_not_special() {
     let out = repo.wt(&repo.main, &["sw", "master"]);
 
     assert!(!out.status.success());
-    assert!(stderr(&out).contains("No worktree found for branch 'master'"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("No worktree found for branch 'master'"),
+        "{}",
+        stderr(&out)
+    );
 }

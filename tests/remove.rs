@@ -11,7 +11,11 @@ fn removes_the_worktree_for_a_branch() {
 
     assert_ok(&out);
     assert!(!feat.exists());
-    assert!(stderr(&out).contains(&format!("Removed worktree: {}", feat.display())), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains(&format!("Removed worktree: {}", feat.display())),
+        "{}",
+        stderr(&out)
+    );
 }
 
 #[test]
@@ -21,7 +25,11 @@ fn fails_without_a_worktree_for_the_branch() {
     let out = repo.wt(&repo.main, &["remove", "nope"]);
 
     assert!(!out.status.success());
-    assert!(stderr(&out).contains("No worktree found for branch 'nope'"), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("No worktree found for branch 'nope'"),
+        "{}",
+        stderr(&out)
+    );
 }
 
 #[test]
