@@ -1,5 +1,7 @@
 mod common;
 
+use std::process::Command;
+
 use common::{TestRepo, assert_ok, stdout};
 
 #[test]
@@ -24,4 +26,23 @@ fn remove_leaves_out_the_main_worktree() {
         assert_ok(&out);
         assert_eq!(stdout(&out), "feat\n", "complete {subcommand}");
     }
+}
+
+#[test]
+fn a_reader_that_goes_away_is_a_clean_exit() {
+    let repo = TestRepo::new();
+    let (reader, writer) = std::io::pipe().unwrap();
+    // fzf closing its end early, made deterministic by closing it before wt writes anything.
+    drop(reader);
+
+    let out = Command::new(env!("CARGO_BIN_EXE_wt"))
+        .current_dir(&repo.main)
+        .args(["complete", "switch"])
+        .stdout(writer)
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(0), "stderr:\n{stderr}");
+    assert!(!stderr.contains("panicked"), "stderr:\n{stderr}");
 }

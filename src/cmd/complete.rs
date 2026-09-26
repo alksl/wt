@@ -1,3 +1,5 @@
+use std::io::{self, Write};
+
 use anyhow::{Result, bail};
 
 use crate::repo::Repo;
@@ -16,8 +18,17 @@ pub fn run(subcommand: &str) -> Result<()> {
         .iter()
         .filter(|wt| include_main || !wt.is_main)
         .filter_map(|wt| wt.branch.as_deref());
-    for branch in branches {
-        println!("{branch}");
+    print_lines(branches)
+}
+
+/// fzf closes the pipe as soon as a candidate is picked, which is not an error.
+fn print_lines<'a>(lines: impl IntoIterator<Item = &'a str>) -> Result<()> {
+    let mut out = io::stdout().lock();
+    for line in lines {
+        match writeln!(out, "{line}") {
+            Err(e) if e.kind() == io::ErrorKind::BrokenPipe => return Ok(()),
+            result => result?,
+        }
     }
     Ok(())
 }
