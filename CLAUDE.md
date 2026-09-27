@@ -32,11 +32,11 @@ variant. Each command lives in its own file under `src/cmd/`.
 
 - `wt switch` prints the worktree path and nothing else on stdout; the zsh function cds to it.
   All logging therefore goes to stderr.
-- `wt complete switch|new|remove` (hidden) prints one branch per line for the fzf completion.
+- `wt complete switch|new|remove|exec` (hidden) prints one branch per line for the fzf completion.
   `remove` lists the linked worktrees' branches. `new`, which also serves `wt sw -c`, lists the
   branches with no worktree, each followed by a tab and `local` or `origin` (origin only when
-  there's no local branch of that name). `switch` lists every worktree's branch, then `new`'s
-  lines. The completion's `_post` function cuts at the tab.
+  there's no local branch of that name). `exec` lists every worktree's branch, main first, and
+  `switch` lists those, then `new`'s lines. The completion's `_post` function cuts at the tab.
 - The zsh function and fzf completion come from `wt init zsh` (`src/cmd/init.zsh`), which the
   user's zshrc `eval`s.
 - nvim's `utils/worktree/git.lua` strips the `<repo>-` prefix off a worktree directory to get the

@@ -182,3 +182,28 @@ fn creating_triggers_complete_from_the_branches_without_a_worktree() {
     }
     assert_eq!(complete("wt sw "), "main\nfeat\nlocal-only\tlocal\n");
 }
+
+#[test]
+fn exec_completes_branches_before_the_separator_and_defers_after_it() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+    repo.git(&repo.main, &["branch", "local-only"]);
+    // Stand in for fzf's helper, which reads the candidates on stdin, and for zle's fallback.
+    let complete = |lbuf: &str| {
+        let out = zsh(
+            &repo,
+            &repo.main,
+            &format!(
+                r#"eval "$(wt init zsh)"; _fzf_complete() {{ cat }}; zle() {{ echo "zle $*" }}; _fzf_complete_wt "{lbuf}""#
+            ),
+        );
+        assert_ok(&out);
+        stdout(&out)
+    };
+
+    assert_eq!(complete("wt exec "), "main\nfeat\n");
+    assert_eq!(
+        complete("wt exec feat -- ./scr"),
+        "zle expand-or-complete\n"
+    );
+}

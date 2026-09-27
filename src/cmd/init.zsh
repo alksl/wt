@@ -19,8 +19,8 @@ function wt() {
     esac
 }
 
-# fzf's `wt sw **<TAB>` / `wt new **<TAB>` / `wt rm **<TAB>` completion. `sw -c` creates, so it
-# offers what `new` does.
+# fzf's `wt sw **<TAB>` / `wt new **<TAB>` / `wt rm **<TAB>` / `wt exec **<TAB>` completion. `sw -c`
+# creates, so it offers what `new` does. Past `wt exec`'s `--` is the command, completed as usual.
 function _fzf_complete_wt() {
     local args="$*"
     if [[ $args == "wt new "* || $args == "wt "(switch|sw)" "(*" "|)(-c|--create)" "* ]]; then
@@ -30,6 +30,10 @@ function _fzf_complete_wt() {
     elif [[ $args == "wt switch"* || $args == "wt sw"* ]]; then
         _fzf_complete "--reverse --tiebreak=begin" "$@" < <(
             command wt complete switch 2>/dev/null
+        )
+    elif [[ $args == "wt exec "* && $args != *" -- "* ]]; then
+        _fzf_complete "--reverse --tiebreak=begin" "$@" < <(
+            command wt complete exec 2>/dev/null
         )
     elif [[ $args == "wt remove"* || $args == "wt rm"* ]]; then
         _fzf_complete "--reverse --tiebreak=begin" "$@" < <(

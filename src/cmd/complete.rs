@@ -15,6 +15,7 @@ pub fn run(subcommand: &str) -> Result<()> {
             lines
         }
         "new" => without_worktree(&repo)?,
+        "exec" => checked_out(&repo, true)?,
         "remove" | "rm" => checked_out(&repo, false)?,
         other => bail!("no completions for '{other}'"),
     };
