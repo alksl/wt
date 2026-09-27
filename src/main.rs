@@ -3,6 +3,7 @@ mod git;
 mod log;
 mod repo;
 
+use std::ffi::OsString;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
@@ -31,6 +32,17 @@ enum Command {
     /// Remove the worktree checked out on a branch
     #[command(visible_alias = "rm")]
     Remove { branch: String },
+    /// Execute a command at a worktree's root without leaving the current directory
+    ///
+    /// Without a branch, runs at the root of the worktree you are in. Exits with the command's
+    /// status.
+    Exec {
+        /// A branch with a worktree; the default branch runs in the main checkout
+        branch: Option<String>,
+        /// The command and its arguments, after `--`
+        #[arg(last = true, required = true, value_name = "COMMAND")]
+        command: Vec<OsString>,
+    },
     /// List worktrees
     List,
     /// Remove worktrees whose branch is merged into the default branch
@@ -48,6 +60,7 @@ fn main() -> ExitCode {
         Command::New { branch } => cmd::new::run(&branch),
         Command::Switch { create, branch } => cmd::switch::run(&branch, create),
         Command::Remove { branch } => cmd::remove::run(&branch),
+        Command::Exec { branch, command } => cmd::exec::run(branch.as_deref(), &command),
         Command::List => cmd::list::run(),
         Command::Prune => cmd::prune::run(),
         Command::Init { shell } => cmd::init::run(shell),

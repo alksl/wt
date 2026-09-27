@@ -111,6 +111,15 @@ impl Repo {
         Ok(path)
     }
 
+    /// The root of the worktree the current directory is in, main or linked.
+    pub fn current_worktree(&self) -> Result<PathBuf> {
+        self.repo
+            .workdir()
+            .context("Not inside a worktree")?
+            .canonicalize()
+            .context("Could not resolve the current worktree")
+    }
+
     /// Where `wt new` puts a branch: `<parent of main>/<main basename>-<branch>`.
     pub fn worktree_path_for(&self, branch: &str) -> Result<PathBuf> {
         let main = self.main_worktree()?;

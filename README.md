@@ -33,6 +33,7 @@ the `wt` function this defines `cd`s into it. It also wires up fzf's `**<TAB>` c
 wt switch login         # cd into login's worktree (alias: wt sw)
 wt switch -c spike      # a branch that doesn't exist yet: create it from HEAD, then cd
 wt new login            # create the worktree without switching to it
+wt exec login -- make   # run a command in login's worktree, staying where you are
 wt list                 # the same output as git worktree list
 wt remove login         # remove login's worktree (alias: wt rm); the branch stays
 wt prune                # remove every worktree whose branch is merged
