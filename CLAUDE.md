@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-`wt` manages git worktrees that live beside the main checkout as `<repo>-<branch>`. It is a Rust
-port of the bash script at `midgard/dotfiles/local/bin/wt`; `.plans/2026-09-26-port-from-bash.md`
-maps each command's behaviour and the order the port lands in.
+`wt` manages git worktrees that live beside the main checkout as `<repo>-<branch>`, one per
+branch, and ships the zsh integration that lets `wt switch` change directory. `README.md` describes
+it from the user's side.
 
 ## Commands
 
@@ -38,7 +38,7 @@ variant. Each command lives in its own file under `src/cmd/`.
   there's no local branch of that name). `switch` lists every worktree's branch, then `new`'s
   lines. The completion's `_post` function cuts at the tab.
 - The zsh function and fzf completion come from `wt init zsh` (`src/cmd/init.zsh`), which the
-  user's zshrc `eval`s; there are no longer hand-kept copies in `midgard/dotfiles`.
+  user's zshrc `eval`s.
 - nvim's `utils/worktree/git.lua` strips the `<repo>-` prefix off a worktree directory to get the
   name `wt switch` takes, so the naming scheme is load-bearing.
 
