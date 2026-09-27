@@ -16,6 +16,7 @@ cargo clippy --all-targets
 cargo fmt --check
 cargo test --test switch                               # one command's tests
 cargo test --test switch prints_only_the_worktree_path # one test
+make release                                           # the user's: tags, signs, pushes
 ```
 
 ## Design

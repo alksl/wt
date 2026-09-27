@@ -1,6 +1,6 @@
 # wt
 
-`wt` keeps one git worktree per branch, each checked out as a sibling of your main checkout:
+`wt` keeps one git worktree per branch, each checked out beside your main checkout:
 
 ```
 ~/code/proj            main
@@ -13,11 +13,20 @@ review never has to be stashed to make room for something else.
 
 ## Install
 
+On Arch Linux, install `wt-switcher` from the AUR. The command is still `wt`; the package has
+another name because the official repos already have a `wt`.
+
 ```sh
-cargo install --path .
+yay -S wt-switcher
 ```
 
-Then load the shell integration in your `~/.zshrc`:
+Elsewhere, build it with Cargo. It needs `git` at runtime.
+
+```sh
+cargo install --git https://github.com/alksl/wt
+```
+
+Then load the shell integration from your `~/.zshrc`:
 
 ```zsh
 eval "$(wt init zsh)"
@@ -25,7 +34,7 @@ eval "$(wt init zsh)"
 
 A program can't change its parent shell's directory, so `wt switch` prints the worktree's path and
 the `wt` function this defines `cd`s into it. It also wires up fzf's `**<TAB>` completion for
-`wt switch`, `wt new` and `wt remove`. Only zsh is supported.
+`wt switch`, `wt new`, `wt exec` and `wt remove`. Only zsh is supported.
 
 ## Usage
 
@@ -53,20 +62,20 @@ wt sw fix-typo
 
 If `fix-typo` has no worktree yet, `wt` creates one: from your local branch if you have it,
 otherwise from a new local branch tracking `origin/fix-typo`. `wt sw **<TAB>` lists your worktrees
-followed by branches you could open one for, marked `local` or `origin`. `wt` never fetches on its
-own, so completion stays instant and works offline.
+followed by the branches you could open one for, marked `local` or `origin`. `wt` never fetches on
+its own, so completion stays instant and works offline.
 
 ### What prune removes
 
-The default branch is `origin/HEAD`'s target, or whatever the main checkout has on it. `prune`
-removes a linked worktree when its branch is merged into the default branch and has commits of its
-own. A branch that was created and never committed to is trivially "merged", so it is kept with a
-warning. Removal goes through `git worktree remove` without `--force`, so a worktree with
-uncommitted or untracked changes is refused and left alone, and `prune` exits non-zero. The
-worktree holding the default branch is never removed.
+`prune` removes a linked worktree when its branch is merged into the default branch and has commits
+of its own. The default branch is `origin/HEAD`'s target, or whatever the main checkout has on it,
+and its own worktree is never removed. A branch that was created and never committed to counts as
+merged, so it is kept, with a warning. Removal goes through `git worktree remove` without `--force`:
+a worktree with uncommitted or untracked changes is left alone, and `prune` exits non-zero.
 
 ## Development
 
-`CLAUDE.md` covers the design and conventions. In short: `cargo test` runs integration tests that
-drive the built binary against throwaway git repositories, and `cargo clippy --all-targets` and
-`cargo fmt --check` must both be clean.
+`cargo test` runs integration tests that drive the built binary against throwaway git
+repositories, and `cargo clippy --all-targets` and `cargo fmt --check` must both be clean.
+`CLAUDE.md` describes the design and the contracts the shell integration relies on. Releases are cut
+with `make release`; [packaging/aur/README.md](packaging/aur/README.md) explains it.

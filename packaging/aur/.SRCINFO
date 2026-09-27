@@ -1,0 +1,22 @@
+pkgbase = wt-switcher
+	pkgdesc = Keep one git worktree per branch, checked out beside the main checkout
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/alksl/wt
+	arch = x86_64
+	license = MIT
+	checkdepends = git
+	makedepends = cargo
+	makedepends = git
+	depends = gcc-libs
+	depends = glibc
+	depends = git
+	conflicts = wt-bin
+	conflicts = wt-go
+	conflicts = wt-go-bin
+	conflicts = wt-zig
+	source = wt::git+https://github.com/alksl/wt.git#tag=v0.1.0?signed
+	validpgpkeys = 0F7781B7A2AB98DFB83F01B5970E4326B217EC4B
+	sha256sums = SKIP
+
+pkgname = wt-switcher

@@ -2,6 +2,12 @@
 name = "wt"
 version = "0.1.0"
 edition = "2024"
+description = "Keep one git worktree per branch, checked out beside the main checkout"
+license = "MIT"
+repository = "https://github.com/alksl/wt"
+readme = "README.md"
+keywords = ["git", "worktree", "cli"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 anstream = "1.0.0"
