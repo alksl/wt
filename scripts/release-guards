@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Usage: scripts/release-guards <version> <signing key>. Exits 1 at the first reason not to release.
+set -euo pipefail
+
+refuse() { echo "release: $*" >&2; exit 1; }
+newer() { (($(vercmp "$1" "$2") > 0)); }
+tag_on() { [[ -n $(git ls-remote --tags "$1" "refs/tags/$2") ]]; }
+
+if [[ $# -ne 2 ]]; then refuse "usage: scripts/release-guards <version> <signing key>"; fi
+version=$1
+key=$2
+tag=v$version
+changes=$(git status --porcelain)
+branch=$(git symbolic-ref --short -q HEAD || true)
+head=$(git rev-parse HEAD)
+origin_main=$(git ls-remote origin refs/heads/main | cut -f1)
+pkgver=$(source packaging/aur/PKGBUILD && echo "$pkgver")
+pkgrel=$(source packaging/aur/PKGBUILD && echo "$pkgrel")
+srcinfo=$(cd packaging/aur && makepkg --printsrcinfo)
+latest_tag=$(git tag -l 'v*' --sort=-v:refname | head -1)
+aur_version=$(curl -fsSg "https://aur.archlinux.org/rpc/v5/info?arg[]=wt-switcher" |
+  jq -r '.results[0].Version // empty')
+
+# Nothing a release publishes may overwrite or go backwards from an earlier one.
+
+# The commit being released
+if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  refuse "Cargo.toml version must be x.y.z, got '$version'"
+fi
+if [[ -n $changes ]]; then refuse "working tree is not clean"; fi
+if [[ $branch != main ]]; then refuse "not on main"; fi
+if [[ $head != "$origin_main" ]]; then refuse "main is not the same commit as origin's main"; fi
+
+# The packaging agrees with Cargo.toml
+if [[ $pkgver != "$version" ]]; then
+  refuse "PKGBUILD pkgver is $pkgver, Cargo.toml says $version"
+fi
+if [[ $pkgrel != 1 ]]; then refuse "PKGBUILD pkgrel is $pkgrel; a new version starts at 1"; fi
+if [[ $srcinfo != "$(< packaging/aur/.SRCINFO)" ]]; then
+  refuse ".SRCINFO is stale; run makepkg --printsrcinfo > .SRCINFO in packaging/aur"
+fi
+
+# Nothing is published yet (gh must be logged in, or every release looks absent)
+if [[ -n $latest_tag ]] && ! newer "$version" "${latest_tag#v}"; then
+  refuse "$tag is not newer than $latest_tag"
+fi
+if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then refuse "tag $tag exists locally"; fi
+if tag_on origin "$tag"; then refuse "tag $tag exists on origin"; fi
+if tag_on github "$tag"; then refuse "tag $tag exists on github"; fi
+if ! gh auth status > /dev/null 2>&1; then refuse "gh is not logged in; run gh auth login"; fi
+if gh release view "$tag" --repo alksl/wt > /dev/null 2>&1; then
+  refuse "GitHub release $tag exists"
+fi
+if [[ -n $aur_version ]] && ! newer "$version-1" "$aur_version"; then
+  refuse "$version-1 is not newer than $aur_version on the AUR"
+fi
+
+# The signing key
+if [[ -z $key ]]; then
+  refuse "no signing key; set git config --global user.signingkey" \
+    "'<subkey>!' or gpg_signing_subkey in this host's midgard host_vars"
+fi
+if ! gpg --list-secret-keys "$key" > /dev/null 2>&1; then
+  refuse "no secret key for signing key $key"
+fi

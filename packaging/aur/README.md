@@ -25,7 +25,9 @@ reads instead of running the PKGBUILD:
 Push that commit, then run `make release`. It tags `HEAD` as the version in `Cargo.toml`, signs the
 tag, pushes `main` and the tag to `origin` and `github`, creates the GitHub release with the commit
 subjects since the previous tag as its notes, and pushes the PKGBUILD to the AUR from a clone in
-`~/.cache/wt/aur`. It commits nothing and never force-pushes.
+`~/.cache/wt/aur`. It commits nothing and never force-pushes. The steps are the `release` recipe
+in `Makefile`, one command each; the checks, the signing key, the notes and the AUR push are
+scripts in `scripts/`.
 
 It signs with this machine's key: `git config user.signingkey`, or else makepkg's `GPGKEY`, which
 midgard sets per host (midgard's `docs/gpg-signing.md` covers giving a new machine its subkey). It
@@ -63,14 +65,9 @@ another machine.
 git tag -s -u '<your subkey>!' -m v0.2.0 v0.2.0
 git push --atomic origin main refs/tags/v0.2.0
 git push --atomic github main refs/tags/v0.2.0
-gh release create v0.2.0 --repo alksl/wt --verify-tag --title v0.2.0 --notes '…'
-
-# The first time: git clone ssh://aur@aur.archlinux.org/wt-switcher.git ~/.cache/wt/aur
-git -C ~/.cache/wt/aur pull --ff-only
-cp packaging/aur/{PKGBUILD,.SRCINFO} ~/.cache/wt/aur/
-git -C ~/.cache/wt/aur add PKGBUILD .SRCINFO
-git -C ~/.cache/wt/aur commit -m 'Update to 0.2.0-1'
-git -C ~/.cache/wt/aur push -u origin HEAD:master
+scripts/release-notes v0.2.0 |
+  gh release create v0.2.0 --repo alksl/wt --verify-tag --title v0.2.0 --notes-file -
+scripts/publish-aur 0.2.0   # clones or pulls ~/.cache/wt/aur, commits, pushes to master
 ```
 
 The AUR only accepts a branch named `master`, and the first push creates the package. If you have

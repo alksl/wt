@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Usage: scripts/signing-key. Prints this machine's signing key: git's user.signingkey, else
+# makepkg's GPGKEY (the user's makepkg.conf overrides /etc's), else nothing.
+set -euo pipefail
+
+key=$(git config user.signingkey || true)
+if [[ -z $key ]]; then
+  set +u
+  for f in /etc/makepkg.conf "${XDG_CONFIG_HOME:-$HOME/.config}/pacman/makepkg.conf"; do
+    if [[ -r $f ]]; then source "$f"; fi
+  done
+  key=${GPGKEY:-}
+fi
+[[ -z $key ]] || echo "$key"

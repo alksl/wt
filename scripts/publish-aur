@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Usage: scripts/publish-aur <version>. Pushes packaging/aur's PKGBUILD and .SRCINFO to the AUR.
+set -euo pipefail
+
+dir=${XDG_CACHE_HOME:-$HOME/.cache}/wt/aur
+if [[ -d $dir ]]; then
+  git -C "$dir" pull --ff-only
+else
+  git clone ssh://aur@aur.archlinux.org/wt-switcher.git "$dir"
+fi
+cp packaging/aur/PKGBUILD packaging/aur/.SRCINFO "$dir/"
+git -C "$dir" add PKGBUILD .SRCINFO
+git -C "$dir" commit -m "Update to $1-1"
+git -C "$dir" push -u origin HEAD:master

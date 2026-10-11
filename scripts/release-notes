@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Usage: scripts/release-notes <tag>. Prints the GitHub release notes: the commit subjects since the
+# previous v* tag, or "First release.", then where to install it from.
+set -euo pipefail
+
+previous=$(git tag -l 'v*' --sort=-v:refname | { grep -vxF "$1" || true; } | head -1)
+if [[ -n $previous ]]; then
+  git log --format='- %s' "$previous..HEAD"
+else
+  echo 'First release.'
+fi
+printf '\nInstall from the AUR: https://aur.archlinux.org/packages/wt-switcher\n'
