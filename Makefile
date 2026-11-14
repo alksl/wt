@@ -1,5 +1,5 @@
-# make release: tags HEAD as the version in Cargo.toml and publishes it to GitHub and the AUR.
-# packaging/aur/README.md covers bumping the version first and finishing a release by hand.
+# make release: tags HEAD as the version in Cargo.toml and publishes it as a GitHub release with
+# a static Linux binary. RELEASING.md covers bumping the version first and finishing by hand.
 SHELL := bash
 .SHELLFLAGS := -o pipefail -c
 
@@ -13,10 +13,10 @@ release:
 	cargo fmt --check
 	cargo clippy --all-targets -- -D warnings
 	cargo test
+	scripts/build-dist '$(KEY)'
 	git tag -s -u '$(KEY)' -m $(TAG) $(TAG)
 	git tag -v $(TAG)
 	git push --atomic origin main refs/tags/$(TAG)
 	git push --atomic github main refs/tags/$(TAG)
 	scripts/release-notes $(TAG) | \
-	  gh release create $(TAG) --repo alksl/wt --verify-tag --title $(TAG) --notes-file -
-	scripts/publish-aur $(VERSION)
+	  gh release create $(TAG) --repo alksl/wt --verify-tag --title $(TAG) --notes-file - dist/*

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: scripts/release-notes <tag>. Prints the GitHub release notes: the commit subjects since the
-# previous v* tag, or "First release.", then where to install it from.
+# previous v* tag, or "First release.", then how to check the binary attached to the release.
 set -euo pipefail
 
 previous=$(git tag -l 'v*' --sort=-v:refname | { grep -vxF "$1" || true; } | head -1)
@@ -9,4 +9,14 @@ if [[ -n $previous ]]; then
 else
   echo 'First release.'
 fi
-printf '\nInstall from the AUR: https://aur.archlinux.org/packages/wt-switcher\n'
+cat <<'NOTES'
+
+The tarball holds a static x86_64 Linux binary. To check it before installing:
+
+```sh
+sha256sum -c SHA256SUMS
+gpg --verify SHA256SUMS.asc SHA256SUMS
+```
+
+The signing key is 0F7781B7A2AB98DFB83F01B5970E4326B217EC4B on keys.openpgp.org.
+NOTES

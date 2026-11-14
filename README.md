@@ -13,14 +13,17 @@ review never has to be stashed to make room for something else.
 
 ## Install
 
-On Arch Linux, install `wt-switcher` from the AUR. The command is still `wt`; the package has
-another name because the official repos already have a `wt`.
+On x86_64 Linux, download the static binary from the latest GitHub release and put it on your
+`PATH`. It needs `git` at runtime.
 
 ```sh
-yay -S wt-switcher
+curl -fsSLO https://github.com/alksl/wt/releases/latest/download/wt-x86_64-unknown-linux-musl.tar.gz
+tar xzf wt-x86_64-unknown-linux-musl.tar.gz
+install -m755 wt-x86_64-unknown-linux-musl/wt ~/.local/bin/
 ```
 
-Elsewhere, build it with Cargo. It needs `git` at runtime.
+The release notes show how to check it against `SHA256SUMS` and its signature. Elsewhere, build it
+with Cargo:
 
 ```sh
 cargo install --git https://github.com/alksl/wt
@@ -78,4 +81,4 @@ a worktree with uncommitted or untracked changes is left alone, and `prune` exit
 `cargo test` runs integration tests that drive the built binary against throwaway git
 repositories, and `cargo clippy --all-targets` and `cargo fmt --check` must both be clean.
 `CLAUDE.md` describes the design and the contracts the shell integration relies on. Releases are cut
-with `make release`; [packaging/aur/README.md](packaging/aur/README.md) explains it.
+with `make release`; [RELEASING.md](RELEASING.md) explains it.
