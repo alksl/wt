@@ -55,3 +55,13 @@ fn logs_in_colour_when_forced() {
 
     assert!(stderr(&out).contains("\x1b["), "{:?}", stderr(&out));
 }
+
+#[test]
+fn version_prints_the_cargo_version() {
+    let repo = TestRepo::new();
+
+    let out = repo.wt(&repo.main, &["--version"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("wt {}\n", env!("CARGO_PKG_VERSION")));
+}

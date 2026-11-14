@@ -9,7 +9,7 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(about = "Manage sibling git worktrees named <repo>-<branch>")]
+#[command(version, about = "Manage sibling git worktrees named <repo>-<branch>")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
