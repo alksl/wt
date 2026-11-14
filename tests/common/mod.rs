@@ -72,6 +72,19 @@ impl TestRepo {
         repo
     }
 
+    /// Writes `toml` to `~/.wt.toml`; `HOME` is the temp dir.
+    pub fn config(&self, toml: &str) {
+        std::fs::write(self.root.join(".wt.toml"), toml).unwrap();
+    }
+
+    /// Makes the temp dir the only project root, so `proj` and its sibling worktrees sit in it.
+    pub fn projects_here(&self) {
+        self.config(&format!(
+            "projects = [{:?}]\n",
+            self.root.display().to_string()
+        ));
+    }
+
     /// Writes `contents` to `rel` under `dir`, creating parent directories.
     pub fn write(&self, dir: &Path, rel: &str, contents: &str) {
         let path = dir.join(rel);

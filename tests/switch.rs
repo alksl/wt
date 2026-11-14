@@ -116,3 +116,116 @@ fn creates_the_worktree_for_a_local_branch_without_one() {
     assert_eq!(repo.git(&path, &["rev-parse", "HEAD"]), feat_tip);
     assert_stderr_contains(&out, "Using existing branch 'feat'");
 }
+
+#[test]
+fn outside_a_repo_a_project_alone_is_its_main_checkout() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+    repo.projects_here();
+
+    let out = repo.wt(&repo.root, &["sw", "proj"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("{}\n", repo.main.display()));
+}
+
+#[test]
+fn outside_a_repo_a_project_and_branch_is_that_worktree() {
+    let repo = TestRepo::new();
+    let feat = repo.add_worktree("feat");
+    repo.projects_here();
+
+    let out = repo.wt(&repo.root, &["sw", "proj", "feat"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("{}\n", feat.display()));
+}
+
+#[test]
+fn outside_a_repo_a_branch_only_origin_has_gets_a_worktree() {
+    let repo = TestRepo::toy();
+    repo.projects_here();
+
+    let out = repo.wt(&repo.root, &["sw", "proj", "remote-feature"]);
+
+    assert_ok(&out);
+    let feature = repo.sibling("remote-feature");
+    assert_eq!(stdout(&out), format!("{}\n", feature.display()));
+    assert!(feature.join("src/feature.rs").is_file());
+}
+
+#[test]
+fn outside_a_repo_create_makes_the_branch_in_the_project() {
+    let repo = TestRepo::new();
+    repo.projects_here();
+
+    let out = repo.wt(&repo.root, &["sw", "-c", "proj", "fresh"]);
+
+    assert_ok(&out);
+    assert_eq!(
+        stdout(&out),
+        format!("{}\n", repo.sibling("fresh").display())
+    );
+    assert_eq!(
+        repo.git(
+            &repo.sibling("fresh"),
+            &["rev-parse", "--abbrev-ref", "HEAD"]
+        ),
+        "fresh"
+    );
+}
+
+#[test]
+fn outside_a_repo_a_branch_of_a_project_without_git_fails() {
+    let repo = TestRepo::new();
+    std::fs::create_dir(repo.root.join("notes")).unwrap();
+    repo.projects_here();
+
+    let out = repo.wt(&repo.root, &["sw", "notes", "feat"]);
+
+    assert!(!out.status.success());
+    assert_eq!(stdout(&out), "");
+    assert_stderr_contains(&out, "'notes' is not a git repository");
+}
+
+#[test]
+fn outside_a_repo_an_unknown_project_fails_naming_the_roots() {
+    let repo = TestRepo::new();
+    repo.projects_here();
+
+    let out = repo.wt(&repo.root, &["sw", "nope"]);
+
+    assert!(!out.status.success());
+    assert_eq!(stdout(&out), "");
+    assert_stderr_contains(&out, "No project 'nope'");
+    assert_stderr_contains(&out, &repo.root.display().to_string());
+}
+
+#[test]
+fn outside_a_repo_the_first_root_wins_a_shared_name() {
+    let repo = TestRepo::new();
+    let first = repo.root.join("first/proj");
+    std::fs::create_dir_all(&first).unwrap();
+    repo.config(&format!(
+        "projects = [{:?}, {:?}]\n",
+        repo.root.join("first").display().to_string(),
+        repo.root.display().to_string()
+    ));
+
+    let out = repo.wt(&repo.root, &["sw", "proj"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("{}\n", first.display()));
+}
+
+#[test]
+fn inside_a_repo_a_second_argument_fails() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+
+    let out = repo.wt(&repo.main, &["sw", "feat", "extra"]);
+
+    assert!(!out.status.success());
+    assert_eq!(stdout(&out), "");
+    assert_stderr_contains(&out, "takes one branch inside a repository");
+}

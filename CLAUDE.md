@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this
+repository.
 
 `wt` manages git worktrees that live beside the main checkout as `<repo>-<branch>`, one per
 branch, and ships the zsh integration that lets `wt switch` change directory. `README.md` describes
@@ -33,11 +34,19 @@ variant. Each command lives in its own file under `src/cmd/`.
 
 - `wt switch` prints the worktree path and nothing else on stdout; the zsh function cds to it.
   All logging therefore goes to stderr.
+- Outside any repository `wt switch <project> [branch]` reads `~/.wt.toml` and prints the
+  project's main checkout, or with a branch does what `wt switch <branch>` does inside it. No
+  other command reads the config.
 - `wt complete switch|new|remove|exec` (hidden) prints one branch per line for the fzf completion.
   `remove` lists the linked worktrees' branches. `new`, which also serves `wt sw -c`, lists the
   branches with no worktree, each followed by a tab and `local` or `origin` (origin only when
   there's no local branch of that name). `exec` lists every worktree's branch, main first, and
   `switch` lists those, then `new`'s lines. The completion's `_post` function cuts at the tab.
+- `wt complete switch [<word>…]` completes the word after those already typed. Outside a repo it
+  prints project names with no words, and a git project's switch lines after one, computed in that
+  project. Inside a repo any word, and anywhere a further word, prints nothing. The zsh completion
+  chains a branch picker after a picked project by calling it again with that project. The plain
+  `<TAB>` completion `_wt` calls it with the words typed after `wt switch`, minus flags.
 - The zsh function and fzf completion come from `wt init zsh` (`src/cmd/init.zsh`), which the
   user's zshrc `eval`s.
 - nvim's `utils/worktree/git.lua` strips the `<repo>-` prefix off a worktree directory to get the

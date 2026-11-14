@@ -93,6 +93,37 @@ fn failed_switch_stays_put_and_fails() {
 }
 
 #[test]
+fn switch_from_outside_a_repo_cds_into_the_projects_worktree() {
+    let repo = TestRepo::new();
+    let feat = repo.add_worktree("feat");
+    repo.projects_here();
+
+    let out = zsh(
+        &repo,
+        &repo.root,
+        r#"eval "$(wt init zsh)"; wt sw proj feat; pwd"#,
+    );
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), format!("{}\n", feat.display()));
+}
+
+#[test]
+fn failed_switch_from_outside_a_repo_stays_put() {
+    let repo = TestRepo::new();
+    repo.projects_here();
+
+    let out = zsh(
+        &repo,
+        &repo.root,
+        r#"eval "$(wt init zsh)"; wt sw nope feat; rc=$?; pwd; exit $rc"#,
+    );
+
+    assert!(!out.status.success(), "wt sw nope feat succeeded");
+    assert_eq!(stdout(&out), format!("{}\n", repo.root.display()));
+}
+
+#[test]
 fn other_commands_pass_through() {
     let repo = TestRepo::new();
     repo.add_worktree("feat");
@@ -206,4 +237,104 @@ fn exec_completes_branches_before_the_separator_and_defers_after_it() {
         complete("wt exec feat -- ./scr"),
         "zle expand-or-complete\n"
     );
+}
+
+/// Runs `_fzf_complete_wt` on `lbuf` from `dir`, typed with `prefix` before the trigger, with fzf
+/// stood in for by a function that prints its query and candidates, then picks the first one.
+fn complete_picking_first(repo: &TestRepo, dir: &Path, prefix: &str, lbuf: &str) -> String {
+    let out = zsh(
+        repo,
+        dir,
+        &format!(
+            r#"eval "$(wt init zsh)"
+            _fzf_complete() {{
+                local c; c=$(cat)
+                print -r -- "query=$prefix"; print -r -- "$c"
+                [[ -n $c ]] && LBUFFER="$2${{${{c%%$'\n'*}}%%$'\t'*}} "
+            }}
+            LBUFFER="{lbuf}"; prefix={prefix} _fzf_complete_wt "{lbuf}"; print -r -- "lbuf=$LBUFFER""#
+        ),
+    );
+    assert_ok(&out);
+    stdout(&out)
+}
+
+#[test]
+fn switch_outside_a_repo_chains_a_branch_picker_after_the_project() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+    repo.projects_here();
+
+    assert_eq!(
+        complete_picking_first(&repo, &repo.root, "pr", "wt sw "),
+        "query=pr\nproj\nquery=\nmain\nfeat\nlbuf=wt sw proj main \n"
+    );
+}
+
+#[test]
+fn switch_outside_a_repo_after_a_typed_project_offers_only_its_branches() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+    repo.projects_here();
+
+    assert_eq!(
+        complete_picking_first(&repo, &repo.root, "", "wt sw proj "),
+        "query=\nmain\nfeat\nlbuf=wt sw proj main \n"
+    );
+}
+
+#[test]
+fn registers_a_plain_tab_completion_when_compinit_has_run() {
+    let repo = TestRepo::new();
+
+    let out = zsh(
+        &repo,
+        &repo.main,
+        r#"autoload -Uz compinit && compinit -D -u; eval "$(wt init zsh)"; print -r -- $_comps[wt]"#,
+    );
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), "_wt\n");
+}
+
+/// Runs the plain-TAB completion `_wt` on `words`, the cursor on the last, with zsh's `_describe`
+/// stood in for by a function that prints the candidates it was given.
+fn tab_complete(repo: &TestRepo, dir: &Path, words: &str) -> String {
+    let out = zsh(
+        repo,
+        dir,
+        &format!(
+            r#"eval "$(wt init zsh)"
+            _describe() {{ print -rl -- "${{(@P)${{@[-1]}}}}" }}
+            words=({words}); CURRENT=${{#words}}; _wt"#
+        ),
+    );
+    assert_ok(&out);
+    stdout(&out)
+}
+
+#[test]
+fn tab_completes_projects_then_their_branches_outside_a_repo() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+    repo.git(&repo.main, &["branch", "local-only"]);
+    repo.projects_here();
+
+    assert_eq!(tab_complete(&repo, &repo.root, "wt sw ''"), "proj\n");
+    assert_eq!(
+        tab_complete(&repo, &repo.root, "wt switch proj ''"),
+        "main\nfeat\nlocal-only:local\n"
+    );
+    assert_eq!(
+        tab_complete(&repo, &repo.root, "wt sw -c proj ''"),
+        tab_complete(&repo, &repo.root, "wt sw proj ''")
+    );
+}
+
+#[test]
+fn tab_completes_branches_inside_a_repo() {
+    let repo = TestRepo::new();
+    repo.add_worktree("feat");
+
+    assert_eq!(tab_complete(&repo, &repo.main, "wt sw ''"), "main\nfeat\n");
 }

@@ -142,3 +142,46 @@ fn working_from_inside_a_linked_worktree() {
         ]
     );
 }
+
+#[test]
+fn jumping_into_a_project_from_home() {
+    let repo = TestRepo::toy();
+    repo.projects_here();
+    let home = &repo.root;
+
+    assert_eq!(
+        wt_ok(&repo, home, &["sw", "proj"]),
+        format!("{}\n", repo.main.display())
+    );
+
+    let feature = repo.sibling("remote-feature");
+    assert_eq!(
+        wt_ok(&repo, home, &["sw", "proj", "remote-feature"]),
+        format!("{}\n", feature.display())
+    );
+    assert!(
+        feature.join("src/feature.rs").is_file(),
+        "the checkout has origin's commits"
+    );
+
+    let spike = repo.sibling("spike");
+    assert_eq!(
+        wt_ok(&repo, home, &["sw", "-c", "proj", "spike"]),
+        format!("{}\n", spike.display())
+    );
+    assert_eq!(
+        wt_ok(&repo, home, &["sw", "proj", "main"]),
+        format!("{}\n", repo.main.display())
+    );
+    assert_eq!(
+        git_worktrees(&repo),
+        vec![
+            (repo.main.clone(), "main".to_string()),
+            (feature, "remote-feature".to_string()),
+            (spike, "spike".to_string()),
+        ]
+    );
+
+    let out = repo.wt(home, &["list"]);
+    assert!(!out.status.success(), "other commands still need a repo");
+}

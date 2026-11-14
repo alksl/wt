@@ -37,9 +37,18 @@ pub struct Repo {
 impl Repo {
     /// Discover the repository from the current directory, from the main or any linked worktree.
     pub fn discover() -> Result<Self> {
-        let repo = gix::discover_with_environment_overrides(".")
-            .map_err(|_| anyhow!("Not inside a git repository"))?;
-        Ok(Self {
+        Self::try_discover()?.ok_or_else(|| anyhow!("Not inside a git repository"))
+    }
+
+    /// Like `discover`, but `None` when no repository encloses the current directory. Any other
+    /// failure to open one is still an error.
+    pub fn try_discover() -> Result<Option<Self>> {
+        let repo = match gix::discover_with_environment_overrides(".") {
+            Ok(repo) => repo,
+            Err(e) if e.is_not_found() => return Ok(None),
+            Err(e) => return Err(anyhow!("Could not open the git repository: {e}")),
+        };
+        Ok(Some(Self {
             repo,
             main: OnceCell::new(),
             main_worktree: OnceCell::new(),
@@ -48,7 +57,7 @@ impl Repo {
             worktrees: OnceCell::new(),
             local_branches: OnceCell::new(),
             origin_branches: OnceCell::new(),
-        })
+        }))
     }
 
     /// All worktrees, main first, in the order `git worktree list` prints them.

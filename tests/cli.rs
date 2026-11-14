@@ -65,3 +65,13 @@ fn version_prints_the_cargo_version() {
     assert_ok(&out);
     assert_eq!(stdout(&out), format!("wt {}\n", env!("CARGO_PKG_VERSION")));
 }
+
+#[test]
+fn outside_a_repository_says_so() {
+    let repo = TestRepo::new();
+
+    let out = repo.wt(&repo.root, &["list"]);
+
+    assert!(!out.status.success(), "wt list succeeded outside a repo");
+    assert_stderr_contains(&out, "Not inside a git repository");
+}

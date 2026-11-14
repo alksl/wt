@@ -1,6 +1,8 @@
 mod cmd;
+mod config;
 mod git;
 mod log;
+mod projects;
 mod repo;
 
 use std::ffi::OsString;
@@ -22,12 +24,20 @@ enum Command {
     /// Print the worktree path for a branch; the shell function cds to it
     ///
     /// A local or origin branch without a worktree gets one first.
+    ///
+    /// Outside any repository, the first argument is a project: a directory under one of the
+    /// `projects` roots in ~/.wt.toml (default ~/code). Alone it prints the project's main
+    /// checkout; with a branch it switches to that branch inside the project.
     #[command(visible_alias = "sw")]
     Switch {
         /// Also create a branch that exists nowhere yet, from HEAD
         #[arg(short, long)]
         create: bool,
-        branch: String,
+        /// A branch, or outside a repository a project
+        #[arg(value_name = "BRANCH|PROJECT")]
+        target: String,
+        /// Outside a repository, the branch to switch to in the project
+        branch: Option<String>,
     },
     /// Remove the worktree checked out on a branch
     #[command(visible_alias = "rm")]
@@ -51,20 +61,28 @@ enum Command {
     Init { shell: cmd::init::Shell },
     /// Print candidates for shell completion
     #[command(hide = true)]
-    Complete { subcommand: String },
+    Complete {
+        subcommand: String,
+        /// The words already typed after the subcommand
+        args: Vec<String>,
+    },
 }
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let result = match cli.command {
         Command::New { branch } => cmd::new::run(&branch),
-        Command::Switch { create, branch } => cmd::switch::run(&branch, create),
+        Command::Switch {
+            create,
+            target,
+            branch,
+        } => cmd::switch::run(&target, branch.as_deref(), create),
         Command::Remove { branch } => cmd::remove::run(&branch),
         Command::Exec { branch, command } => cmd::exec::run(branch.as_deref(), &command),
         Command::List => cmd::list::run(),
         Command::Prune => cmd::prune::run(),
         Command::Init { shell } => cmd::init::run(shell),
-        Command::Complete { subcommand } => cmd::complete::run(&subcommand),
+        Command::Complete { subcommand, args } => cmd::complete::run(&subcommand, &args),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

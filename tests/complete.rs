@@ -78,6 +78,62 @@ fn remove_leaves_out_the_main_worktree() {
     }
 }
 
+/// `with_origin()` beside a worktree on `feat`, a plain `notes` directory and a local-only branch,
+/// with the temp dir as the only project root.
+fn projects() -> TestRepo {
+    let repo = TestRepo::with_origin();
+    repo.add_worktree("feat");
+    repo.git(&repo.main, &["branch", "local-only"]);
+    std::fs::create_dir(repo.root.join("notes")).unwrap();
+    repo.projects_here();
+    repo
+}
+
+#[test]
+fn switch_outside_a_repo_offers_the_projects() {
+    let repo = projects();
+
+    let out = repo.wt(&repo.root, &["complete", "switch"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), "notes\nproj\n");
+}
+
+#[test]
+fn switch_after_a_project_offers_its_branches_main_first() {
+    let repo = projects();
+    repo.git(&repo.main, &["branch", "aaa"]);
+
+    let out = repo.wt(&repo.root, &["complete", "switch", "proj"]);
+
+    assert_ok(&out);
+    assert_eq!(stdout(&out), "main\nfeat\naaa\tlocal\nlocal-only\tlocal\n");
+}
+
+#[test]
+fn switch_offers_nothing_after_a_project_without_git_or_inside_a_repo_after_a_branch() {
+    let repo = projects();
+
+    for (dir, word) in [(&repo.root, "notes"), (&repo.main, "feat")] {
+        let out = repo.wt(dir, &["complete", "switch", word]);
+
+        assert_ok(&out);
+        assert_eq!(stdout(&out), "", "complete switch {word}");
+    }
+}
+
+#[test]
+fn other_subcommands_still_need_a_repo() {
+    let repo = projects();
+
+    for subcommand in ["new", "exec", "remove"] {
+        let out = repo.wt(&repo.root, &["complete", subcommand]);
+
+        assert!(!out.status.success(), "complete {subcommand} succeeded");
+        assert_eq!(stdout(&out), "", "complete {subcommand}");
+    }
+}
+
 #[test]
 fn a_reader_that_goes_away_is_a_clean_exit() {
     let repo = TestRepo::new();
